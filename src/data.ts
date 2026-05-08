@@ -5,7 +5,7 @@ export const mockArticles = [
     version: 'v3.2',
     badge: '',
     excerpt: 'VLAN segmentation, firewall zones, and redundant link configuration for production banking networks.',
-    content: 'This document outlines the core banking network topology. \n\n## VLAN Segmentation\nWe use VLANs 100-199 for core services...\n\n## Firewall Zones\nStrict isolation between DMZ, App, and DB tiers.',
+    content: 'This document outlines the core banking network topology.\n\n## VLAN Segmentation\nWe use VLANs 100-199 for core services...\n\n## Firewall Zones\nStrict isolation between DMZ, App, and DB tiers.\n\n## Failover Procedures\nEnsure BGP convergence times are below 50ms.',
     category: 'Network',
     categoryColor: 'bg-blue-100 text-blue-800',
     categoryIcon: 'Server',

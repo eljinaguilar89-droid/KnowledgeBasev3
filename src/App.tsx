@@ -120,21 +120,6 @@ const EditorView = ({ onNavigate }: { onNavigate: (view: any) => void }) => {
             <div className="bg-slate-50 border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all">
               {/* Toolbar */}
               <div className="flex items-center gap-1 border-b border-slate-300 p-2 bg-slate-100 flex-wrap">
-                <select 
-                  className="bg-transparent text-sm border border-slate-300 outline-none cursor-pointer hover:bg-slate-200 p-1.5 rounded mr-1 text-slate-700 focus:ring-1 focus:ring-blue-500" 
-                  onChange={(e) => { 
-                    if(e.target.value) execCmd('formatBlock', e.target.value); 
-                    e.target.value = '';
-                  }}
-                >
-                  <option value="">Format...</option>
-                  <option value="H1">Heading 1</option>
-                  <option value="H2">Subheading 1 (H2)</option>
-                  <option value="H3">Subheading 2 (H3)</option>
-                  <option value="P">Paragraph</option>
-                  <option value="PRE">Code Block</option>
-                </select>
-                <div className="w-px h-4 bg-slate-300 mx-1"></div>
                 <IconButton icon={Bold} onClick={() => execCmd('bold')} className="hover:bg-slate-200" />
                 <IconButton icon={Italic} onClick={() => execCmd('italic')} className="hover:bg-slate-200" />
                 <IconButton icon={Underline} onClick={() => execCmd('underline')} className="hover:bg-slate-200" />
@@ -209,6 +194,17 @@ export default function App() {
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [browsePage, setBrowsePage] = useState(1);
+  const [articlePage, setArticlePage] = useState(1);
+  const ITEMS_PER_PAGE = 6;
+
+  React.useEffect(() => {
+    setBrowsePage(1);
+  }, [searchQuery, selectedCategory]);
+
+  React.useEffect(() => {
+    setArticlePage(1);
+  }, [selectedArticleId]);
 
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
@@ -222,13 +218,12 @@ export default function App() {
   const selectedArticle = mockArticles.find(a => a.id === selectedArticleId);
 
   // Derived state
-  let filteredArticles = mockArticles.filter(a => a.status === 'Published');
+  let filteredArticles = mockArticles;
   if (searchQuery) filteredArticles = filteredArticles.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.excerpt.toLowerCase().includes(searchQuery.toLowerCase()));
   if (selectedCategory !== 'All Categories') filteredArticles = filteredArticles.filter(a => a.category === selectedCategory);
   
   // Tab filtered articles for dashboard
   let tabArticles = mockArticles;
-  if (activeTab === 'Overview') tabArticles = mockArticles.filter(a => a.status === 'Published');
   if (activeTab === 'My Articles') tabArticles = mockArticles.filter(a => a.author === 'JD');
   if (activeTab === 'Pending Review') tabArticles = mockArticles.filter(a => a.status === 'Pending');
 
@@ -238,7 +233,20 @@ export default function App() {
         <div className="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md tracking-wider">
           PSBank I&E
         </div>
-        <h1 className="text-sm font-semibold text-slate-800">Knowledge Base Portal</h1>
+        <form 
+          onSubmit={(e) => { e.preventDefault(); handleNavigate('browse'); }} 
+          className="relative group hidden sm:block ml-4"
+        >
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500" />
+          <input 
+            id="main-search-input"
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search knowledge base..." 
+            className="w-64 pl-9 pr-4 py-1.5 text-sm bg-slate-50 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+          />
+        </form>
       </div>
       <div className="flex items-center gap-2">
         <button onClick={() => handleNavigate('editor')} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
@@ -523,8 +531,10 @@ export default function App() {
 
   const renderArticleDetailView = () => {
     if (!selectedArticle) return <div>Article not found</div>;
-    const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = 120; // Simulated large file
+    
+    const pages = selectedArticle.content.split(/\n\s*\n/).filter(p => p.trim() !== '');
+    const currentArticlePageContent = pages[articlePage - 1] || selectedArticle.content;
+    const totalArticlePages = pages.length;
 
     return (
       <div className="max-w-3xl mx-auto py-8 px-6">
@@ -532,110 +542,147 @@ export default function App() {
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
         
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 lg:p-12 mb-8">
-          <div className="flex items-center gap-3 mb-6">
-            <Badge colorClass={selectedArticle.categoryColor}>{selectedArticle.category}</Badge>
-            <span className="text-sm text-slate-500 flex items-center gap-1"><Clock className="w-4 h-4"/> {selectedArticle.date}</span>
-            <span className="text-sm text-slate-500 flex items-center gap-1"><Eye className="w-4 h-4"/> {selectedArticle.views} views</span>
-          </div>
-          
-          <h1 className="text-3xl font-serif font-semibold text-slate-900 mb-4">{selectedArticle.title}</h1>
-          <p className="text-lg text-slate-500 leading-relaxed mb-8">{selectedArticle.excerpt}</p>
-          
-          <div className="border-t border-slate-200 pt-8 mt-8 prose prose-slate">
-            <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">
-              {currentPage > 1 ? `[Simulated Content for Page ${currentPage}]\n\n` : ''}
-              {selectedArticle.content}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 lg:p-12 mb-8 flex flex-col min-h-[500px]">
+          <div>
+            <div className="flex items-center gap-3 mb-6">
+              <Badge colorClass={selectedArticle.categoryColor}>{selectedArticle.category}</Badge>
+              <span className="text-sm text-slate-500 flex items-center gap-1"><Clock className="w-4 h-4"/> {selectedArticle.date}</span>
+              <span className="text-sm text-slate-500 flex items-center gap-1"><Eye className="w-4 h-4"/> {selectedArticle.views} views</span>
             </div>
-          </div>
-          
-          {/* Pagination selector for large files */}
-          <div className="border-t border-slate-200 pt-6 mt-12 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <span className="text-sm text-slate-500 font-medium">Page {currentPage} of {totalPages}</span>
-            <div className="flex items-center gap-2">
-              <button disabled={currentPage <= 1} onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} className="px-3 py-1.5 text-sm font-medium border border-slate-300 bg-white rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors">
-                Prev
-              </button>
-              
-              <div className="flex items-center gap-2 mx-2">
-                <span className="text-sm text-slate-500">Go to:</span>
-                <input 
-                  type="number" 
-                  min={1} 
-                  max={totalPages} 
-                  value={currentPage} 
-                  onChange={(e) => {
-                    if(e.target.value === '') return;
-                    const val = parseInt(e.target.value);
-                    if (!isNaN(val)) setCurrentPage(Math.min(totalPages, Math.max(1, val)));
-                  }}
-                  className="w-16 px-2 py-1 text-sm border border-slate-300 rounded-md text-center focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
-                />
+            
+            <h1 className="text-3xl font-serif font-semibold text-slate-900 mb-4">{selectedArticle.title}</h1>
+            <p className="text-lg text-slate-500 leading-relaxed mb-8">{selectedArticle.excerpt}</p>
+            
+            <div className="border-t border-slate-200 pt-8 mt-8 prose prose-slate">
+              <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">
+                {totalArticlePages > 1 ? currentArticlePageContent : selectedArticle.content}
               </div>
-
-              <button disabled={currentPage >= totalPages} onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} className="px-3 py-1.5 text-sm font-medium border border-slate-300 bg-white rounded-lg hover:bg-slate-50 disabled:opacity-50 transition-colors">
-                Next
-              </button>
             </div>
           </div>
+
+          {totalArticlePages > 1 && (
+            <div className="mt-auto pt-10 pb-2">
+              <div className="flex justify-center flex-col items-center gap-3 border-t border-slate-100 pt-6">
+                <div className="text-xs text-slate-400 font-medium tracking-wider">PAGE {articlePage} OF {totalArticlePages}</div>
+                <div className="flex justify-center items-center gap-2">
+                  <button 
+                    disabled={articlePage === 1}
+                    onClick={() => setArticlePage(prev => Math.max(1, prev - 1))}
+                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-md bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalArticlePages }).map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={() => setArticlePage(i + 1)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-md text-sm ${articlePage === i + 1 ? 'bg-blue-600 text-white font-medium' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'} transition-colors`}
+                      >
+                        {i + 1}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button 
+                    disabled={articlePage === totalArticlePages}
+                    onClick={() => setArticlePage(prev => Math.min(totalArticlePages, prev + 1))}
+                    className="px-3 py-1.5 text-sm border border-slate-300 rounded-md bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   };
 
-  const renderBrowseView = () => (
-    <div className="max-w-5xl mx-auto p-6 lg:p-8">
-      <h2 className="text-2xl font-serif text-slate-800 mb-6">Browse Knowledge Base</h2>
-      <div className="flex flex-col sm:flex-row gap-3 mb-8">
-        <div className="relative flex-1 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500" />
-          <input 
-            id="main-search-input"
-            type="text" 
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search articles... (e.g. firewall, DR)" 
-            className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
-          />
-        </div>
-        <select 
-          value={selectedCategory} 
-          onChange={(e) => setSelectedCategory(e.target.value)} 
-          className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 shadow-sm outline-none cursor-pointer"
-        >
-          <option>All Categories</option>
-          <optgroup label="Infrastructure">
-            <option>Network</option>
-            <option>Cloud & Hybrid</option>
-            <option>Databases</option>
-            <option>Security</option>
-            <option>DR/BCP</option>
-          </optgroup>
-          <optgroup label="Engineering">
-            <option>Engineering</option>
-            <option>CI/CD & DevOps</option>
-            <option>API Catalog</option>
-            <option>Change Mgmt</option>
-          </optgroup>
-          <optgroup label="Governance">
-            <option>Policies & SOPs</option>
-          </optgroup>
-        </select>
-        <button className="flex items-center justify-center p-2 border border-slate-300 bg-white rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-colors">
-          <Filter className="w-5 h-5" />
-        </button>
-      </div>
+  const renderBrowseView = () => {
+    const totalPages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE);
+    const paginatedArticles = filteredArticles.slice((browsePage - 1) * ITEMS_PER_PAGE, browsePage * ITEMS_PER_PAGE);
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredArticles.map(article => (
-          <React.Fragment key={article.id}>{renderArticleCard({ article })}</React.Fragment>
-        ))}
+    return (
+      <div className="max-w-5xl mx-auto p-6 lg:p-8">
+        <h2 className="text-2xl font-serif text-slate-800 mb-6">Browse Knowledge Base</h2>
+        <div className="flex flex-col sm:flex-row gap-3 mb-8 justify-between">
+          <div className="flex items-center gap-3">
+            <select 
+              value={selectedCategory} 
+              onChange={(e) => setSelectedCategory(e.target.value)} 
+              className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 shadow-sm outline-none cursor-pointer min-w-[200px]"
+            >
+              <option>All Categories</option>
+              <optgroup label="Infrastructure">
+                <option>Network</option>
+                <option>Cloud & Hybrid</option>
+                <option>Databases</option>
+                <option>Security</option>
+                <option>DR/BCP</option>
+              </optgroup>
+              <optgroup label="Engineering">
+                <option>Engineering</option>
+                <option>CI/CD & DevOps</option>
+                <option>API Catalog</option>
+                <option>Change Mgmt</option>
+              </optgroup>
+              <optgroup label="Governance">
+                <option>Policies & SOPs</option>
+              </optgroup>
+            </select>
+            <button className="flex items-center justify-center p-2 border border-slate-300 bg-white rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-colors">
+              <Filter className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedArticles.map(article => (
+            <React.Fragment key={article.id}>{renderArticleCard({ article })}</React.Fragment>
+          ))}
+        </div>
+        
+        {filteredArticles.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">No articles found matching criteria.</div>
+        ) : (
+          totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 mt-8">
+              <button 
+                disabled={browsePage === 1}
+                onClick={() => setBrowsePage(prev => Math.max(1, prev - 1))}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-md bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+              >
+                Previous
+              </button>
+              
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setBrowsePage(i + 1)}
+                    className={`w-8 h-8 flex items-center justify-center rounded-md text-sm ${browsePage === i + 1 ? 'bg-blue-600 text-white font-medium' : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'} transition-colors`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+
+              <button 
+                disabled={browsePage === totalPages}
+                onClick={() => setBrowsePage(prev => Math.min(totalPages, prev + 1))}
+                className="px-3 py-1.5 text-sm border border-slate-300 rounded-md bg-white text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors"
+              >
+                Next
+              </button>
+            </div>
+          )
+        )}
       </div>
-      {filteredArticles.length === 0 && (
-        <div className="text-center py-12 text-slate-500">No articles found matching criteria.</div>
-      )}
-    </div>
-  );
+    );
+  };
 
   const renderDashboardView = () => (
     <div className="max-w-5xl mx-auto p-6 lg:p-8">
@@ -665,24 +712,6 @@ export default function App() {
         <>
           {activeTab === 'Overview' && (
             <>
-              {/* Search Controls */}
-              <div className="flex flex-col sm:flex-row gap-3 mb-8">
-                <form 
-                  className="relative flex-1 group"
-                  onSubmit={(e) => { e.preventDefault(); handleNavigate('browse'); }}
-                >
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500" />
-                  <input 
-                    id="main-search-input-dashboard"
-                    type="text" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search knowledge base... press ENTER to search" 
-                    className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
-                  />
-                </form>
-              </div>
-
               {/* Stats Grid */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
                 {renderStatCard({ title: "Total Articles", value: "312", subtext: "↑ 14 this month" })}
