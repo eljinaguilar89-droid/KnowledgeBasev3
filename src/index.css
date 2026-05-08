@@ -23,3 +23,30 @@
   --color-blue-800: #3D4034;
   --color-blue-900: #252720;
 }
+
+/* Custom Scrollbar Properties */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-slate-300, #C2BEB0);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-400, #A5A295);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-slate-700, #3C3C3B);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-slate-600, #4A4A48);
+}

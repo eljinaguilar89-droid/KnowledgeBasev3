@@ -3,11 +3,12 @@ import { ArrowLeft, Send, Bold, Italic, Underline, Link, AlignLeft, AlignCenter,
 import { IconButton } from '../components/ui';
 import { mockArticles } from '../data';
 
-export const EditorView = ({ onNavigate, isDarkMode }: { onNavigate: (view: any) => void, isDarkMode?: boolean }) => {
+export const EditorView = ({ onNavigate, isDarkMode, refreshArticles }: { onNavigate: (view: any) => void, isDarkMode?: boolean, refreshArticles?: () => void }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Network');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
   
   const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
@@ -21,31 +22,46 @@ export const EditorView = ({ onNavigate, isDarkMode }: { onNavigate: (view: any)
     document.execCommand(cmd, false, val);
   };
 
-  const handleSave = (status: 'Draft' | 'Pending') => {
+  const handleSave = async (status: 'Draft' | 'Pending') => {
     if (!title.trim()) {
       alert("Please enter an article title.");
       return;
     }
 
     const contentStr = contentRef.current?.innerText || 'No content provided.';
+    setIsSubmitting(true);
     
-    mockArticles.unshift({
-      id: Math.random().toString(36).substr(2, 9),
-      title: title,
-      version: 'v1.0',
-      badge: status === 'Draft' ? 'Draft' : '',
-      excerpt: contentStr.substring(0, 80) + '...',
-      content: contentStr,
-      category: category,
-      categoryColor: 'bg-blue-100 text-blue-800',
-      categoryIcon: 'FileText',
-      author: 'JD',
-      status: status,
-      date: 'Just now',
-      views: 0
-    });
-    
-    onNavigate('dashboard');
+    try {
+      const newArticle = {
+        id: Math.random().toString(36).substr(2, 9),
+        title: title,
+        version: 'v1.0',
+        badge: status === 'Draft' ? 'Draft' : '',
+        excerpt: contentStr.substring(0, 80) + '...',
+        content: contentStr,
+        category: category,
+        categoryColor: 'bg-blue-100 text-blue-800',
+        categoryIcon: 'FileText',
+        author: 'JD',
+        status: status,
+        date: 'Just now',
+        views: 0
+      };
+
+      await fetch('/api/articles', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newArticle)
+      });
+      
+      if (refreshArticles) await refreshArticles();
+      onNavigate('dashboard');
+    } catch (e) {
+      console.error(e);
+      alert('Failed to save article.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -168,10 +184,10 @@ export const EditorView = ({ onNavigate, isDarkMode }: { onNavigate: (view: any)
         </div>
         
         <div className={`mt-8 flex items-center justify-end gap-3 border-t pt-6 ${isDarkMode ? 'border-slate-800' : 'border-slate-100'}`}>
-          <button onClick={() => onNavigate('dashboard')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors ${isDarkMode ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}>Cancel</button>
-          <button onClick={() => handleSave('Draft')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors ${isDarkMode ? 'text-blue-400 bg-blue-900/30 hover:bg-blue-900/50' : 'text-blue-700 bg-blue-100 hover:bg-blue-200'}`}>Save as Draft</button>
-          <button onClick={() => handleSave('Pending')} className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-lg shadow-blue-500/20">
-            <Send className="w-4 h-4" /> Submit for Review
+          <button disabled={isSubmitting} onClick={() => onNavigate('dashboard')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${isDarkMode ? 'text-slate-400 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-100'}`}>Cancel</button>
+          <button disabled={isSubmitting} onClick={() => handleSave('Draft')} className={`px-5 py-2.5 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 ${isDarkMode ? 'text-blue-400 bg-blue-900/30 hover:bg-blue-900/50' : 'text-blue-700 bg-blue-100 hover:bg-blue-200'}`}>Save as Draft</button>
+          <button disabled={isSubmitting} onClick={() => handleSave('Pending')} className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50">
+            {isSubmitting ? 'Submitting...' : <><Send className="w-4 h-4" /> Submit for Review</>}
           </button>
         </div>
       </div>

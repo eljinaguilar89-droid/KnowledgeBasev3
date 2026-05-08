@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import { mockArticles } from './data';
 import { Topbar, Sidebar, RightPanel } from './components/layout';
@@ -17,13 +17,29 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('All Categories');
   const [browsePage, setBrowsePage] = useState(1);
   const [articlePage, setArticlePage] = useState(1);
+  const [articles, setArticles] = useState<any[]>(mockArticles);
   const ITEMS_PER_PAGE = 6;
 
-  React.useEffect(() => {
+  const fetchArticles = () => {
+    return fetch('/api/articles')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          setArticles(data);
+        }
+      })
+      .catch(console.error);
+  };
+
+  useEffect(() => {
+    fetchArticles();
+  }, []);
+
+  useEffect(() => {
     setBrowsePage(1);
   }, [searchQuery, selectedCategory]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setArticlePage(1);
   }, [selectedArticleId]);
 
@@ -37,17 +53,18 @@ export default function App() {
     else setSelectedArticleId(null);
   };
 
-  const selectedArticle = mockArticles.find(a => a.id === selectedArticleId);
+  const selectedArticle = articles.find(a => a.id === selectedArticleId);
 
   // Derived state
-  let filteredArticles = mockArticles;
+  let filteredArticles = articles.filter(a => a.status === 'Published');
   if (searchQuery) filteredArticles = filteredArticles.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.excerpt.toLowerCase().includes(searchQuery.toLowerCase()));
   if (selectedCategory !== 'All Categories') filteredArticles = filteredArticles.filter(a => a.category === selectedCategory);
   
   // Tab filtered articles for dashboard
-  let tabArticles = mockArticles;
-  if (activeTab === 'My Articles') tabArticles = mockArticles.filter(a => a.author === 'JD');
-  if (activeTab === 'Pending Review') tabArticles = mockArticles.filter(a => a.status === 'Pending');
+  let tabArticles = articles;
+  if (activeTab === 'My Articles') tabArticles = articles.filter(a => a.author === 'JD');
+  else if (activeTab === 'Pending Review') tabArticles = articles.filter(a => a.status === 'Pending');
+  else tabArticles = articles.filter(a => a.status === 'Published');
 
   return (
     <div className={`flex flex-col h-screen font-sans overflow-hidden transition-colors duration-300 ${isDarkMode ? 'dark bg-slate-950 text-slate-100' : 'bg-white text-slate-900'}`}>
@@ -102,7 +119,7 @@ export default function App() {
               isDarkMode={isDarkMode}
             />
           )}
-          {currentView === 'editor' && <EditorView onNavigate={handleNavigate} isDarkMode={isDarkMode} />}
+          {currentView === 'editor' && <EditorView onNavigate={handleNavigate} isDarkMode={isDarkMode} refreshArticles={fetchArticles} />}
           {currentView === 'audit' && <AuditView isDarkMode={isDarkMode} />}
           {currentView === 'analytics' && <AnalyticsView isDarkMode={isDarkMode} />}
         </main>

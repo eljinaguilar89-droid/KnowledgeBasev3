@@ -12,11 +12,20 @@ export const Topbar = ({ handleNavigate, searchQuery, setSearchQuery, setShowNot
   <header className={`flex items-center justify-between px-4 py-3 border-b sticky top-0 z-10 w-full transition-colors ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
     <div className="flex items-center gap-3">
       <div className="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md tracking-wider shadow-sm shadow-blue-500/20">
-        PSBank I&E
+        IED
       </div>
+      <div className={`text-sm font-semibold tracking-wide hidden sm:block ${isDarkMode ? 'text-slate-200' : 'text-slate-700'}`}>
+        PSBank Knowledge Base Deck
+      </div>
+    </div>
+    <div className="flex items-center gap-2">
       <form 
         onSubmit={(e) => { e.preventDefault(); handleNavigate('browse'); }} 
-        className="relative group hidden sm:block ml-4"
+        onClick={() => {
+          handleNavigate('browse');
+          setTimeout(() => document.getElementById('main-search-input')?.focus(), 50);
+        }}
+        className="relative group hidden sm:block mr-2"
       >
         <Search className={`absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 group-focus-within:text-blue-500 transition-colors ${isDarkMode ? 'text-slate-500' : 'text-slate-400'}`} />
         <input 
@@ -28,8 +37,6 @@ export const Topbar = ({ handleNavigate, searchQuery, setSearchQuery, setShowNot
           className={`w-64 pl-9 pr-4 py-1.5 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm ${isDarkMode ? 'bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400'}`}
         />
       </form>
-    </div>
-    <div className="flex items-center gap-2">
       <button onClick={() => handleNavigate('editor')} className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium border rounded-md transition-colors ${isDarkMode ? 'text-slate-300 border-slate-700 hover:bg-slate-800' : 'text-slate-600 border-slate-200 hover:bg-slate-50'}`}>
         <Plus className="w-4 h-4" /> New Article
       </button>
