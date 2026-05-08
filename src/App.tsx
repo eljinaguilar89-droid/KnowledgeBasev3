@@ -3,10 +3,13 @@ import {
   Bell, Settings, Plus, LayoutDashboard, BookOpen, Search,
   Server, Cloud, Database, ShieldAlert, Activity, Code,
   GitBranch, Blocks, ListChecks, FileText, ClipboardSignature,
-  BarChart, Users, History, Info, Filter, Clock, Eye,
+  BarChart as BarChartIcon, Users, History, Info, Filter, Clock, Eye,
   ShieldCheck, Shield, FilePlus, FileSearch, Download, Lock,
-  ArrowUpRight
+  ArrowUpRight, ArrowLeft, Send,
+  Bold, Italic, Underline, Link, AlignLeft, AlignCenter, AlignRight, List, ListOrdered, Image as ImageIcon, UploadCloud, X
 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
+import { mockArticles, mockCategories, mockActivities, mockCompliance, mockAuditLogs } from './data';
 
 // --- Shared Components --- //
 
@@ -16,8 +19,8 @@ const Badge = ({ children, colorClass }: { children: React.ReactNode, colorClass
   </span>
 );
 
-const IconButton = ({ icon: Icon, children, className = '' }: { icon: any, children?: React.ReactNode, className?: string }) => (
-  <button className={`flex items-center gap-2 p-1.5 rounded-md hover:bg-slate-100 text-slate-500 transition-colors ${className}`}>
+const IconButton = ({ icon: Icon, children, className = '', onClick }: { icon: any, children?: React.ReactNode, className?: string, onClick?: () => void }) => (
+  <button onClick={onClick} className={`flex items-center gap-2 p-1.5 rounded-md hover:bg-slate-100 text-slate-500 transition-colors ${className}`}>
     <Icon className="w-4 h-4" />
     {children && <span className="text-sm font-medium">{children}</span>}
   </button>
@@ -25,322 +28,738 @@ const IconButton = ({ icon: Icon, children, className = '' }: { icon: any, child
 
 // --- Layout Sections --- //
 
-const Topbar = () => (
-  <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200">
-    <div className="flex items-center gap-3">
-      <div className="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md tracking-wider">
-        PSBank I&E
-      </div>
-      <h1 className="text-sm font-semibold text-slate-800">Knowledge Base Portal</h1>
-    </div>
-    <div className="flex items-center gap-2">
-      <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
-        <Plus className="w-4 h-4" /> New Article
-      </button>
-      <IconButton icon={Bell} />
-      <IconButton icon={Settings} />
-      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-semibold text-xs flex items-center justify-center ml-2 border border-blue-100">
-        JD
-      </div>
-    </div>
-  </header>
-);
-
-const SidebarItem = ({ icon: Icon, label, active = false, badge }: { icon: any, label: string, active?: boolean, badge?: string }) => (
-  <button className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors group ${active ? 'bg-slate-200 text-slate-800 font-medium border-l-4 border-blue-600' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}>
-    <div className="flex items-center gap-3">
-      <Icon className={`w-4 h-4 ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-      <span>{label}</span>
-    </div>
-    {badge && <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 rounded-full font-medium">{badge}</span>}
-  </button>
-);
-
-const SidebarSection = ({ title, children }: { title: string, children: React.ReactNode }) => (
-  <div className="mt-6 mb-2">
-    <h3 className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{title}</h3>
-    <div className="space-y-0.5">{children}</div>
-  </div>
-);
-
-const Sidebar = () => (
-  <aside className="w-60 bg-slate-100 border-r border-slate-200 flex-shrink-0 overflow-y-auto hidden md:block">
-    <div className="p-3 space-y-0.5">
-      <SidebarItem icon={LayoutDashboard} label="Dashboard" active />
-      <SidebarItem icon={BookOpen} label="Browse Articles" />
-      <SidebarItem icon={Search} label="Search" />
-
-      <SidebarSection title="Infrastructure">
-        <SidebarItem icon={Server} label="Network & Servers" />
-        <SidebarItem icon={Cloud} label="Cloud & Hybrid" />
-        <SidebarItem icon={Database} label="Databases" />
-        <SidebarItem icon={ShieldAlert} label="Security Ops" />
-        <SidebarItem icon={Activity} label="DR & BCP" />
-      </SidebarSection>
-
-      <SidebarSection title="Engineering">
-        <SidebarItem icon={Code} label="Dev Standards" />
-        <SidebarItem icon={GitBranch} label="CI/CD & DevOps" />
-        <SidebarItem icon={Blocks} label="API Catalog" />
-        <SidebarItem icon={ListChecks} label="Change Mgmt" />
-      </SidebarSection>
-
-      <SidebarSection title="Governance">
-        <SidebarItem icon={FileText} label="Policies & SOPs" />
-        <SidebarItem icon={ClipboardSignature} label="Audit Logs" badge="New" />
-        <SidebarItem icon={BarChart} label="Analytics" />
-      </SidebarSection>
-
-      <SidebarSection title="Admin">
-        <SidebarItem icon={Users} label="Access Control" />
-        <SidebarItem icon={History} label="Version History" />
-      </SidebarSection>
-    </div>
-  </aside>
-);
-
-// --- Dashboard Widgets --- //
-
-const StatCard = ({ title, value, subtext }: { title: string, value: string, subtext: string }) => (
-  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-    <p className="text-xs font-medium text-slate-500 mb-1">{title}</p>
-    <p className="text-2xl font-serif font-semibold text-slate-800">{value}</p>
-    <p className="text-xs text-slate-500 mt-1">{subtext}</p>
-  </div>
-);
-
-const CategoryCard = ({ icon: Icon, title, count, colorClass }: { icon: any, title: string, count: string, colorClass: string }) => (
-  <button className="flex flex-col items-start p-4 bg-white border border-slate-200 rounded-2xl hover:border-blue-500 hover:shadow-sm transition-all text-left">
-    <div className={`p-2 rounded-lg mb-3 ${colorClass}`}>
-      <Icon className="w-5 h-5" />
-    </div>
-    <h4 className="text-sm font-semibold text-slate-800 mb-1">{title}</h4>
-    <p className="text-xs text-slate-500">{count}</p>
-  </button>
-);
-
-const ArticleCard = ({ title, version, badge, excerpt, metaBadge, date, views }: any) => (
-  <div className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-full">
-    <div>
-      <div className="flex items-start justify-between mb-2 gap-2">
-        <h4 className="text-sm font-semibold text-slate-800 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">{title}</h4>
-        {version && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0 font-medium">{version}</span>}
-        {badge && <Badge colorClass="bg-red-100 text-red-800 flex-shrink-0">{badge}</Badge>}
-      </div>
-      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">{excerpt}</p>
-    </div>
-    <div className="flex items-center gap-3 text-xs text-slate-400 mt-auto pt-3 border-t border-slate-50">
-      <Badge colorClass={`${metaBadge.color}`}>{metaBadge.text}</Badge>
-      <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {date}</span>
-      <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {views}</span>
-    </div>
-  </div>
-);
-
-const RightPanel = () => (
-  <aside className="w-72 bg-slate-100 border-l border-slate-200 flex-shrink-0 overflow-y-auto hidden lg:block">
-    <div className="p-5">
-      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Activity</h3>
-      
-      <div className="space-y-4">
-        {[
-          { text: 'JD updated "Core Banking Network Topology"', time: '2 hours ago', color: 'bg-blue-500' },
-          { text: 'RS approved "DR Failover SOP v2.0"', time: 'Yesterday', color: 'bg-green-500' },
-          { text: 'PCI DSS article flagged for review', time: '3 days ago', color: 'bg-amber-500' },
-          { text: 'New P1 runbook published by MR', time: '5 days ago', color: 'bg-red-500' },
-          { text: 'ISO 27001 policy article reviewed', time: '1 week ago', color: 'bg-slate-300' },
-        ].map((item, i) => (
-          <div key={i} className="flex gap-3">
-            <div className="mt-1.5 relative flex justify-center">
-              <div className={`w-2 h-2 rounded-full ${item.color} z-10`}></div>
-              {i !== 4 && <div className="absolute top-2 w-px h-full bg-slate-200"></div>}
-            </div>
-            <div>
-              <p className="text-xs text-slate-700 leading-relaxed font-medium">{item.text}</p>
-              <p className="text-[10px] text-slate-400 mt-0.5">{item.time}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-8 mb-3">Quick Links</h3>
-      <div className="space-y-1">
-        <SidebarItem icon={FilePlus} label="Submit new article" />
-        <SidebarItem icon={FileSearch} label="Request review" />
-        <SidebarItem icon={Download} label="Export to PDF" />
-        <SidebarItem icon={Lock} label="Manage permissions" />
-      </div>
-
-      <div className="mt-8 bg-slate-50 p-4 rounded-xl border border-slate-100">
-        <h3 className="text-xs font-semibold text-slate-800 mb-3">Your Contributions</h3>
-        <div className="space-y-2 text-xs">
-          <div className="flex justify-between items-center py-1 border-b border-slate-200">
-            <span className="text-slate-600">Authored</span>
-            <span className="font-semibold text-slate-800">8</span>
-          </div>
-          <div className="flex justify-between items-center py-1 border-b border-slate-200">
-            <span className="text-slate-600">Pending review</span>
-            <span className="font-semibold text-slate-800">2</span>
-          </div>
-          <div className="flex justify-between items-center py-1">
-            <span className="text-slate-600">Drafts</span>
-            <span className="font-semibold text-slate-800">1</span>
-          </div>
-        </div>
-        <button className="w-full mt-4 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors">
-          Open Editor <ArrowUpRight className="w-3 h-3" />
-        </button>
-      </div>
-
-    </div>
-  </aside>
-);
-
-// --- Main App Component --- //
-
-export default function App() {
-  const [activeTab, setActiveTab] = useState('Overview');
+const EditorView = ({ onNavigate }: { onNavigate: (view: any) => void }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [files, setFiles] = useState<File[]>([]);
+  
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); setIsDragging(true); };
+  const onDragLeave = () => setIsDragging(false);
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); setIsDragging(false);
+    if (e.dataTransfer.files?.length) setFiles([...files, ...Array.from(e.dataTransfer.files)]);
+  };
+  
+  const execCmd = (cmd: string, val?: string) => {
+    document.execCommand(cmd, false, val);
+  };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
-      <Topbar />
-      
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar />
+    <div className="max-w-4xl mx-auto py-8 px-6">
+      <button onClick={() => onNavigate('dashboard')} className="flex items-center gap-2 text-sm text-slate-500 mb-6 hover:text-slate-800 transition-colors">
+        <ArrowLeft className="w-4 h-4" /> Back
+      </button>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+        <h2 className="text-2xl font-serif text-slate-800 mb-6">Create New Article</h2>
         
-        <main className="flex-1 overflow-y-auto">
-          <div className="max-w-5xl mx-auto p-6 lg:p-8">
-            
-            {/* Alert Bar */}
-            <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-6 shadow-sm">
-              <Info className="w-5 h-5 flex-shrink-0 text-blue-600" />
-              <p className="text-sm">
-                <span className="font-semibold">Action Required:</span> 3 articles due for BSP compliance review this quarter. 
-                <button className="ml-2 font-semibold underline decoration-blue-300 hover:text-blue-900">Review now</button>
-              </p>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex gap-6 border-b border-slate-200 mb-6 px-1">
-              {['Overview', 'My Articles', 'Pending Review', 'Compliance', 'Audit Trail'].map(tab => (
-                <button 
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-3 text-sm font-medium transition-colors border-b-2 ${activeTab === tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'}`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
-
-            {/* Search Controls */}
-            <div className="flex flex-col sm:flex-row gap-3 mb-8">
-              <div className="relative flex-1 group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500" />
-                <input 
-                  type="text" 
-                  placeholder="Search knowledge base... (e.g. firewall policy, DR runbook)" 
-                  className="w-full pl-9 pr-4 py-3 text-sm bg-slate-100 border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
-                />
-              </div>
-              <select className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-sm outline-none cursor-pointer">
-                <option>All Categories</option>
+        <div className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Article Title</label>
+            <input type="text" placeholder="e.g. Setting up VPN on MacOS" className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Category</label>
+              <select className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50">
                 <option>Network</option>
                 <option>Security</option>
                 <option>Engineering</option>
+                <option>DR/BCP</option>
               </select>
-              <button className="flex items-center justify-center p-2 border border-slate-300 bg-white rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-colors">
-                <Filter className="w-5 h-5" />
-              </button>
             </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
-              <StatCard title="Total Articles" value="312" subtext="↑ 14 this month" />
-              <StatCard title="Pending Review" value="18" subtext="5 overdue" />
-              <StatCard title="Compliance Coverage" value="94%" subtext="BSP, ISO 27001" />
-              <StatCard title="Active Contributors" value="27" subtext="Across 4 teams" />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Tags (comma separated)</label>
+              <input type="text" placeholder="e.g. guides, setup, mac" className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50" />
             </div>
-
-            {/* Categories */}
-            <div className="mb-10">
-              <div className="flex items-baseline justify-between mb-4">
-                <h3 className="text-xl font-serif text-slate-800">Browse Categories</h3>
-                <span className="text-xs text-slate-500 font-medium">6 categories</span>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Article Content</label>
+            <div className="bg-slate-50 border border-slate-300 rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-blue-500/50 focus-within:border-blue-500 transition-all">
+              {/* Toolbar */}
+              <div className="flex items-center gap-1 border-b border-slate-300 p-2 bg-slate-100 flex-wrap">
+                <IconButton icon={Bold} onClick={() => execCmd('bold')} className="hover:bg-slate-200" />
+                <IconButton icon={Italic} onClick={() => execCmd('italic')} className="hover:bg-slate-200" />
+                <IconButton icon={Underline} onClick={() => execCmd('underline')} className="hover:bg-slate-200" />
+                <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                <IconButton icon={List} onClick={() => execCmd('insertUnorderedList')} className="hover:bg-slate-200" />
+                <IconButton icon={ListOrdered} onClick={() => execCmd('insertOrderedList')} className="hover:bg-slate-200" />
+                <div className="w-px h-4 bg-slate-300 mx-1"></div>
+                <IconButton icon={Link} onClick={() => { const url = prompt('URL:'); if(url) execCmd('createLink', url); }} className="hover:bg-slate-200" />
+                <IconButton icon={ImageIcon} className="hover:bg-slate-200" />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <CategoryCard icon={Server} title="Network & Infrastructure" count="84 articles · 12 pending" colorClass="bg-blue-100 text-blue-700" />
-                <CategoryCard icon={ShieldCheck} title="Security & Compliance" count="71 articles · 3 pending" colorClass="bg-green-100 text-green-700" />
-                <CategoryCard icon={Code} title="Engineering Standards" count="58 articles · 1 pending" colorClass="bg-indigo-100 text-indigo-700" />
-                <CategoryCard icon={Activity} title="DR & Business Continuity" count="42 articles · 2 pending" colorClass="bg-amber-100 text-amber-700" />
-                <CategoryCard icon={Blocks} title="API & Integration Catalog" count="37 articles · 0 pending" colorClass="bg-teal-100 text-teal-700" />
-                <CategoryCard icon={ListChecks} title="SOPs & Policies" count="20 articles · 0 pending" colorClass="bg-rose-100 text-rose-700" />
+              
+              {/* Editable Area */}
+              <div 
+                className="w-full min-h-[300px] p-4 bg-white focus:outline-none prose prose-slate max-w-none text-sm cursor-text"
+                contentEditable
+                suppressContentEditableWarning
+                placeholder="Write your article content here..."
+              ></div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Attachments</label>
+            <div 
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              className={`border-2 border-dashed rounded-xl p-8 text-center transition-colors cursor-pointer ${isDragging ? 'border-blue-500 bg-blue-50' : 'border-slate-300 hover:border-blue-400 bg-slate-50'}`}
+            >
+              <input type="file" multiple className="hidden" id="file-upload" onChange={(e) => {
+                if(e.target.files) setFiles([...files, ...Array.from(e.target.files)]);
+              }} />
+              <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center w-full h-full">
+                <UploadCloud className={`w-10 h-10 mb-4 ${isDragging ? 'text-blue-500' : 'text-slate-400'}`} />
+                <p className="text-sm text-slate-700 mb-1"><span className="font-semibold text-blue-600">Click to upload</span> or drag and drop</p>
+                <p className="text-xs text-slate-500">PDF, DOC, images up to 10MB</p>
+              </label>
+            </div>
+            
+            {files.length > 0 && (
+              <ul className="mt-4 space-y-2">
+                {files.map((file, idx) => (
+                  <li key={idx} className="flex items-center justify-between text-sm p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+                    <span className="truncate max-w-[80%] text-slate-700 font-medium">{file.name}</span>
+                    <button onClick={() => setFiles(files.filter((_, i) => i !== idx))} className="p-1 text-slate-400 hover:text-red-500 transition-colors">
+                      <X className="w-4 h-4" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          
+        </div>
+        
+        <div className="mt-8 flex items-center justify-end gap-3 border-t border-slate-100 pt-6">
+          <button onClick={() => onNavigate('dashboard')} className="px-5 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors">Cancel</button>
+          <button className="px-5 py-2.5 text-sm font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors">Save as Draft</button>
+          <button className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+            <Send className="w-4 h-4" /> Submit for Review
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default function App() {
+  const [currentView, setCurrentView] = useState<'dashboard' | 'browse' | 'article' | 'editor' | 'audit' | 'analytics'>('dashboard');
+  const [activeTab, setActiveTab] = useState('Overview');
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  const handleNavigate = (view: 'dashboard' | 'browse' | 'article' | 'editor' | 'audit' | 'analytics', id?: string) => {
+    setCurrentView(view);
+    if (id) setSelectedArticleId(id);
+    else setSelectedArticleId(null);
+  };
+
+  const selectedArticle = mockArticles.find(a => a.id === selectedArticleId);
+
+  // Derived state
+  let filteredArticles = mockArticles;
+  if (searchQuery) filteredArticles = filteredArticles.filter(a => a.title.toLowerCase().includes(searchQuery.toLowerCase()) || a.excerpt.toLowerCase().includes(searchQuery.toLowerCase()));
+  if (selectedCategory !== 'All Categories') filteredArticles = filteredArticles.filter(a => a.category === selectedCategory);
+  
+  // Tab filtered articles for dashboard
+  let tabArticles = mockArticles;
+  if (activeTab === 'My Articles') tabArticles = mockArticles.filter(a => a.author === 'JD');
+  if (activeTab === 'Pending Review') tabArticles = mockArticles.filter(a => a.status === 'Pending');
+
+  const renderTopbar = () => (
+    <header className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-200 sticky top-0 z-10 w-full">
+      <div className="flex items-center gap-3">
+        <div className="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md tracking-wider">
+          PSBank I&E
+        </div>
+        <h1 className="text-sm font-semibold text-slate-800">Knowledge Base Portal</h1>
+      </div>
+      <div className="flex items-center gap-2">
+        <button onClick={() => handleNavigate('editor')} className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition-colors">
+          <Plus className="w-4 h-4" /> New Article
+        </button>
+        <IconButton icon={Bell} onClick={() => setShowNotifs(true)} />
+        <IconButton icon={Settings} onClick={() => setShowSettings(true)} />
+        <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-700 font-semibold text-xs flex items-center justify-center ml-2 border border-blue-100">
+          JD
+        </div>
+      </div>
+    </header>
+  );
+
+  const renderSidebarItem = ({ icon: Icon, label, view, tabTarget, categoryTarget, onClickId }: { icon: any, label: string, view?: any, tabTarget?: string, categoryTarget?: string, onClickId?: string }) => {
+    let active = false;
+    if (view === 'dashboard') {
+      active = currentView === 'dashboard' && (tabTarget ? activeTab === tabTarget : activeTab === 'Overview');
+    } else if (view === 'browse') {
+      active = currentView === 'browse' && (categoryTarget ? selectedCategory === categoryTarget : selectedCategory === 'All Categories');
+    } else if (view) {
+      active = currentView === view;
+    }
+
+    return (
+      <button 
+        onClick={() => {
+          if (view) handleNavigate(view);
+          if (tabTarget) {
+            handleNavigate('dashboard');
+            setActiveTab(tabTarget);
+          }
+          if (categoryTarget) {
+            setSelectedCategory(categoryTarget);
+          } else if (view === 'browse') {
+            setSelectedCategory('All Categories');
+          } else if (view === 'dashboard' && !tabTarget) {
+            setActiveTab('Overview');
+          }
+          if (onClickId === 'search') {
+            setTimeout(() => document.getElementById('main-search-input')?.focus(), 50);
+          }
+        }}
+        className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors group ${active ? 'bg-slate-200 text-slate-800 font-medium border-l-4 border-blue-600' : 'text-slate-600 hover:bg-slate-200 hover:text-slate-900'}`}
+      >
+        <div className="flex items-center gap-3">
+          <Icon className={`w-4 h-4 ${active ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
+          <span>{label}</span>
+        </div>
+      </button>
+    );
+  };
+
+  const renderSidebarSection = ({ title, children }: { title: string, children: React.ReactNode }) => (
+    <div className="mt-6 mb-2">
+      <h3 className="px-3 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">{title}</h3>
+      <div className="space-y-0.5">{children}</div>
+    </div>
+  );
+
+  const renderSidebar = () => (
+    <aside className="w-60 bg-slate-100 border-r border-slate-200 flex-shrink-0 overflow-y-auto hidden md:block">
+      <div className="p-3 space-y-0.5">
+        {renderSidebarItem({ icon: LayoutDashboard, label: "Dashboard", view: "dashboard" })}
+        {renderSidebarItem({ icon: BookOpen, label: "Browse Articles", view: "browse" })}
+        {renderSidebarItem({ icon: Search, label: "Search", view: "browse", onClickId: "search" })}
+
+        {renderSidebarSection({
+          title: "Infrastructure",
+          children: (
+            <>
+              {renderSidebarItem({ icon: Server, label: "Network & Servers", view: "browse", categoryTarget: "Network" })}
+              {renderSidebarItem({ icon: Cloud, label: "Cloud & Hybrid", view: "browse", categoryTarget: "Cloud & Hybrid" })}
+              {renderSidebarItem({ icon: Database, label: "Databases", view: "browse", categoryTarget: "Databases" })}
+              {renderSidebarItem({ icon: ShieldAlert, label: "Security Ops", view: "browse", categoryTarget: "Security" })}
+              {renderSidebarItem({ icon: Activity, label: "DR & BCP", view: "browse", categoryTarget: "DR/BCP" })}
+            </>
+          )
+        })}
+
+        {renderSidebarSection({
+          title: "Engineering",
+          children: (
+            <>
+              {renderSidebarItem({ icon: Code, label: "Dev Standards", view: "browse", categoryTarget: "Engineering" })}
+              {renderSidebarItem({ icon: GitBranch, label: "CI/CD & DevOps", view: "browse", categoryTarget: "CI/CD & DevOps" })}
+              {renderSidebarItem({ icon: Blocks, label: "API Catalog", view: "browse", categoryTarget: "API Catalog" })}
+              {renderSidebarItem({ icon: ListChecks, label: "Change Mgmt", view: "browse", categoryTarget: "Change Mgmt" })}
+            </>
+          )
+        })}
+
+        {renderSidebarSection({
+          title: "Governance",
+          children: (
+            <>
+              {renderSidebarItem({ icon: FileText, label: "Policies & SOPs", view: "browse", categoryTarget: "Policies & SOPs" })}
+              {renderSidebarItem({ icon: ClipboardSignature, label: "Audit Logs", view: "audit" })}
+              {renderSidebarItem({ icon: BarChartIcon, label: "Analytics", view: "analytics" })}
+            </>
+          )
+        })}
+      </div>
+    </aside>
+  );
+
+  const renderRightPanel = () => (
+    <aside className="w-72 bg-slate-100 border-l border-slate-200 flex-shrink-0 overflow-y-auto hidden lg:block">
+      <div className="p-5">
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">Recent Activity</h3>
+        <div className="space-y-4">
+          {mockActivities.map((item, i) => (
+            <div key={item.id} className="flex gap-3">
+              <div className="mt-1.5 relative flex justify-center">
+                <div className={`w-2 h-2 rounded-full ${item.color} z-10`}></div>
+                {i !== mockActivities.length - 1 && <div className="absolute top-2 w-px h-full bg-slate-200"></div>}
+              </div>
+              <div>
+                <p className="text-xs text-slate-700 leading-relaxed font-medium">{item.text}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{item.time}</p>
               </div>
             </div>
+          ))}
+        </div>
 
-            {/* Recent Articles */}
-            <div className="mb-10">
-              <div className="flex items-baseline justify-between mb-4">
-                <h3 className="text-xl font-serif text-slate-800">Recent & Pinned Articles</h3>
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors">View all</button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
-                <ArticleCard 
-                  title="Core Banking Network Topology" version="v3.2" 
-                  excerpt="VLAN segmentation, firewall zones, and redundant link configuration for production banking networks."
-                  metaBadge={{text: 'Network', color: 'bg-blue-100 text-blue-800'}}
-                  date="2d ago" views="148"
-                />
-                <ArticleCard 
-                  title="Incident Response Runbook — P1/P2" badge="Critical"
-                  excerpt="Step-by-step escalation matrix, war room setup, comms templates, and regulatory notification timelines."
-                  metaBadge={{text: 'Security', color: 'bg-amber-100 text-amber-800'}}
-                  date="5d ago" views="312"
-                />
-                <ArticleCard 
-                  title="DR Failover SOP — Core Banking System" version="v2.0"
-                  excerpt="RTO/RPO targets, failover triggers, validation checklist, and BSP notification requirements."
-                  metaBadge={{text: 'DR/BCP', color: 'bg-green-100 text-green-800'}}
-                  date="1w ago" views="96"
-                />
-                <ArticleCard 
-                  title="API Gateway — Auth & Rate Limiting Policy" version="v1.4"
-                  excerpt="OAuth 2.0 flow, token expiry settings, rate limit tiers, and PCI DSS compliance mapping."
-                  metaBadge={{text: 'Engineering', color: 'bg-indigo-100 text-indigo-800'}}
-                  date="2w ago" views="74"
-                />
-              </div>
+        <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mt-8 mb-3">Quick Links</h3>
+        <div className="space-y-1">
+          <button onClick={() => handleNavigate('editor')} className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-slate-200 text-slate-600 transition-colors">
+            <div className="flex items-center gap-3"><FilePlus className="w-4 h-4 text-slate-400" /><span>Submit new article</span></div>
+          </button>
+          <button onClick={() => { handleNavigate('dashboard'); setActiveTab('Pending Review'); }} className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-slate-200 text-slate-600 transition-colors">
+            <div className="flex items-center gap-3"><FileSearch className="w-4 h-4 text-slate-400" /><span>Request review</span></div>
+          </button>
+          <button onClick={() => handleNavigate('audit')} className="w-full flex items-center justify-between px-3 py-2 text-sm rounded-md hover:bg-slate-200 text-slate-600 transition-colors">
+            <div className="flex items-center gap-3"><History className="w-4 h-4 text-slate-400" /><span>View audit trail</span></div>
+          </button>
+        </div>
+
+        <div className="mt-8 bg-slate-50 p-4 rounded-xl border border-slate-100">
+          <h3 className="text-xs font-semibold text-slate-800 mb-3">Your Contributions</h3>
+          <div className="space-y-2 text-xs">
+            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+              <span className="text-slate-600">Authored</span>
+              <span className="font-semibold text-slate-800">8</span>
             </div>
+            <div className="flex justify-between items-center py-1 border-b border-slate-200">
+              <span className="text-slate-600">Pending review</span>
+              <span className="font-semibold text-slate-800">2</span>
+            </div>
+            <div className="flex justify-between items-center py-1">
+              <span className="text-slate-600">Drafts</span>
+              <span className="font-semibold text-slate-800">1</span>
+            </div>
+          </div>
+          <button onClick={() => handleNavigate('editor')} className="w-full mt-4 flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-lg transition-colors">
+            Open Editor <ArrowUpRight className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
 
-            {/* Compliance Section */}
-            <div className="mb-8">
-              <h3 className="text-xl font-serif text-slate-800 mb-4">Compliance Status</h3>
-              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                {[
-                  { text: 'BSP Circular 1140 — IT Risk Management', status: 'Covered', color: 'bg-green-100 text-green-800' },
-                  { text: 'ISO/IEC 27001 — Information Security', status: 'Covered', color: 'bg-green-100 text-green-800' },
-                  { text: 'PCI DSS v4.0 — Cardholder Data Environment', status: 'Partial', color: 'bg-amber-100 text-amber-800' },
-                  { text: 'BSP MORB — Operational Risk Controls', status: 'Review Due', color: 'bg-red-100 text-red-800' }
-                ].map((item, i, arr) => (
-                  <div key={i} className={`flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors ${i !== arr.length - 1 ? 'border-b border-slate-100' : ''}`}>
-                    <div className="flex items-center gap-3 text-sm font-medium text-slate-700">
-                      <Shield className="w-4 h-4 text-slate-400" />
-                      {item.text}
-                    </div>
-                    <Badge colorClass={`${item.color}`}>{item.status}</Badge>
+  const renderStatCard = ({ title, value, subtext }: any) => (
+    <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+      <p className="text-xs font-medium text-slate-500 mb-1">{title}</p>
+      <p className="text-2xl font-serif font-semibold text-slate-800">{value}</p>
+      <p className="text-xs text-slate-500 mt-1">{subtext}</p>
+    </div>
+  );
+
+  const renderArticleCard = ({ article }: any) => (
+    <div onClick={() => handleNavigate('article', article.id)} className="bg-white p-4 rounded-2xl border border-slate-200 hover:border-blue-500 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between h-full">
+      <div>
+        <div className="flex items-start justify-between mb-2 gap-2">
+          <h4 className="text-sm font-semibold text-slate-800 leading-snug group-hover:text-blue-600 transition-colors line-clamp-2">{article.title}</h4>
+          {article.version && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded flex-shrink-0 font-medium">{article.version}</span>}
+          {article.badge && <Badge colorClass="bg-red-100 text-red-800 flex-shrink-0">{article.badge}</Badge>}
+        </div>
+        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-4">{article.excerpt}</p>
+      </div>
+      <div className="flex items-center gap-3 text-xs text-slate-400 mt-auto pt-3 border-t border-slate-50">
+        <Badge colorClass={article.categoryColor || 'bg-slate-100 text-slate-800'}>{article.category}</Badge>
+        <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {article.date}</span>
+        <span className="flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> {article.views}</span>
+      </div>
+    </div>
+  );
+
+  // --- Views --- //
+  
+  const renderAnalyticsView = () => {
+    const viewData = [
+      { name: 'Mon', views: 400 },
+      { name: 'Tue', views: 300 },
+      { name: 'Wed', views: 550 },
+      { name: 'Thu', views: 450 },
+      { name: 'Fri', views: 700 },
+      { name: 'Sat', views: 200 },
+      { name: 'Sun', views: 150 },
+    ];
+    
+    const categoryData = [
+      { name: 'Network', value: 84 },
+      { name: 'Security', value: 71 },
+      { name: 'Engineering', value: 58 },
+      { name: 'DR/BCP', value: 42 },
+    ];
+    const COLORS = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b'];
+
+    return (
+      <div className="max-w-5xl mx-auto py-8 px-6">
+        <h2 className="text-2xl font-serif text-slate-800 mb-6">Analytics Dashboard</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <h3 className="text-md font-semibold text-slate-800 mb-4">Views Over Past 7 Days</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={viewData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                  <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                  <Line type="monotone" dataKey="views" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} activeDot={{r: 6}} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <h3 className="text-md font-semibold text-slate-800 mb-4">Articles by Category</h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
+                    {categoryData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center gap-4 mt-2">
+                {categoryData.map((entry, index) => (
+                  <div key={entry.name} className="flex items-center gap-1.5 text-xs text-slate-600">
+                    <div className="w-2.5 h-2.5 rounded-full" style={{backgroundColor: COLORS[index % COLORS.length]}}></div>
+                    {entry.name}
                   </div>
                 ))}
               </div>
             </div>
-
-            {/* Padding at bottom for spacing */}
-            <div className="h-8"></div>
-
           </div>
-        </main>
+        </div>
+      </div>
+    );
+  };
 
-        <RightPanel />
+  const renderAuditView = () => (
+    <div className="max-w-5xl mx-auto py-8 px-6">
+      <h2 className="text-2xl font-serif text-slate-800 mb-6">Audit Trail</h2>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase text-slate-500">
+              <th className="px-6 py-4 font-semibold tracking-wider">Date</th>
+              <th className="px-6 py-4 font-semibold tracking-wider">User</th>
+              <th className="px-6 py-4 font-semibold tracking-wider">Action</th>
+              <th className="px-6 py-4 font-semibold tracking-wider">Item</th>
+            </tr>
+          </thead>
+          <tbody className="text-sm divide-y divide-slate-100">
+            {mockAuditLogs.map(log => (
+              <tr key={log.id} className="hover:bg-slate-50">
+                <td className="px-6 py-4 text-slate-500 whitespace-nowrap">{log.date}</td>
+                <td className="px-6 py-4 font-medium text-slate-700">{log.user}</td>
+                <td className="px-6 py-4 text-blue-600 font-medium">{log.action}</td>
+                <td className="px-6 py-4 text-slate-800">{log.item}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
+
+  const renderArticleDetailView = () => {
+    if (!selectedArticle) return <div>Article not found</div>;
+    return (
+      <div className="max-w-3xl mx-auto py-8 px-6">
+        <button onClick={() => handleNavigate('dashboard')} className="flex items-center gap-2 text-sm text-slate-500 mb-6 hover:text-slate-800 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
+        </button>
+        
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 lg:p-12 mb-8">
+          <div className="flex items-center gap-3 mb-6">
+            <Badge colorClass={selectedArticle.categoryColor}>{selectedArticle.category}</Badge>
+            <span className="text-sm text-slate-500 flex items-center gap-1"><Clock className="w-4 h-4"/> {selectedArticle.date}</span>
+            <span className="text-sm text-slate-500 flex items-center gap-1"><Eye className="w-4 h-4"/> {selectedArticle.views} views</span>
+          </div>
+          
+          <h1 className="text-3xl font-serif font-semibold text-slate-900 mb-4">{selectedArticle.title}</h1>
+          <p className="text-lg text-slate-500 leading-relaxed mb-8">{selectedArticle.excerpt}</p>
+          
+          <div className="border-t border-slate-200 pt-8 mt-8 prose prose-slate">
+            <div className="text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">
+              {selectedArticle.content}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderBrowseView = () => (
+    <div className="max-w-5xl mx-auto p-6 lg:p-8">
+      <h2 className="text-2xl font-serif text-slate-800 mb-6">Browse Knowledge Base</h2>
+      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500" />
+          <input 
+            id="main-search-input"
+            type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search articles... (e.g. firewall, DR)" 
+            className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+          />
+        </div>
+        <select 
+          value={selectedCategory} 
+          onChange={(e) => setSelectedCategory(e.target.value)} 
+          className="px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 shadow-sm outline-none cursor-pointer"
+        >
+          <option>All Categories</option>
+          <optgroup label="Infrastructure">
+            <option>Network</option>
+            <option>Cloud & Hybrid</option>
+            <option>Databases</option>
+            <option>Security</option>
+            <option>DR/BCP</option>
+          </optgroup>
+          <optgroup label="Engineering">
+            <option>Engineering</option>
+            <option>CI/CD & DevOps</option>
+            <option>API Catalog</option>
+            <option>Change Mgmt</option>
+          </optgroup>
+          <optgroup label="Governance">
+            <option>Policies & SOPs</option>
+          </optgroup>
+        </select>
+        <button className="flex items-center justify-center p-2 border border-slate-300 bg-white rounded-lg hover:bg-slate-50 text-slate-600 shadow-sm transition-colors">
+          <Filter className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {filteredArticles.map(article => (
+          <React.Fragment key={article.id}>{renderArticleCard({ article })}</React.Fragment>
+        ))}
+      </div>
+      {filteredArticles.length === 0 && (
+        <div className="text-center py-12 text-slate-500">No articles found matching criteria.</div>
+      )}
+    </div>
+  );
+
+  const renderDashboardView = () => (
+    <div className="max-w-5xl mx-auto p-6 lg:p-8">
+      {/* Alert Bar */}
+      <div className="flex items-center gap-3 bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-lg mb-6 shadow-sm">
+        <Info className="w-5 h-5 flex-shrink-0 text-blue-600" />
+        <p className="text-sm">
+          <span className="font-semibold">Action Required:</span> 3 articles due for BSP compliance review this quarter. 
+          <button className="ml-2 font-semibold underline decoration-blue-300 hover:text-blue-900">Review now</button>
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex gap-6 border-b border-slate-200 mb-6 px-1 overflow-x-auto whitespace-nowrap">
+        {['Overview', 'My Articles', 'Pending Review', 'Compliance', 'Audit Trail'].map(tab => (
+          <button 
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-3 text-sm font-medium transition-colors border-b-2 ${activeTab === tab ? 'border-blue-600 text-blue-700' : 'border-transparent text-slate-500 hover:text-slate-800 hover:border-slate-300'}`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {(activeTab === 'Overview' || activeTab === 'My Articles' || activeTab === 'Pending Review') && (
+        <>
+          {activeTab === 'Overview' && (
+            <>
+              {/* Search Controls */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                <form 
+                  className="relative flex-1 group"
+                  onSubmit={(e) => { e.preventDefault(); handleNavigate('browse'); }}
+                >
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500" />
+                  <input 
+                    id="main-search-input-dashboard"
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search knowledge base... press ENTER to search" 
+                    className="w-full pl-9 pr-4 py-3 text-sm bg-white border border-slate-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all shadow-sm"
+                  />
+                </form>
+              </div>
+
+              {/* Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+                {renderStatCard({ title: "Total Articles", value: "312", subtext: "↑ 14 this month" })}
+                {renderStatCard({ title: "Pending Review", value: "18", subtext: "5 overdue" })}
+                {renderStatCard({ title: "Compliance Coverage", value: "94%", subtext: "BSP, ISO 27001" })}
+                {renderStatCard({ title: "Active Contributors", value: "27", subtext: "Across 4 teams" })}
+              </div>
+
+              {/* Categories */}
+              <div className="mb-10">
+                <div className="flex items-baseline justify-between mb-4">
+                  <h3 className="text-xl font-serif text-slate-800">Browse Categories</h3>
+                  <span className="text-xs text-slate-500 font-medium">6 categories</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {mockCategories.map((cat, idx) => (
+                    <button key={idx} onClick={() => { setSelectedCategory(cat.filterCategory); handleNavigate('browse'); }} className="flex flex-col items-start p-4 bg-white border border-slate-200 rounded-2xl hover:border-blue-500 hover:shadow-sm transition-all text-left group">
+                      <div className={`p-2 rounded-lg mb-3 ${cat.colorClass}`}>
+                        {cat.icon === 'Server' && <Server className="w-5 h-5" />}
+                        {cat.icon === 'ShieldCheck' && <ShieldCheck className="w-5 h-5" />}
+                        {cat.icon === 'Code' && <Code className="w-5 h-5" />}
+                        {cat.icon === 'Activity' && <Activity className="w-5 h-5" />}
+                        {cat.icon === 'Blocks' && <Blocks className="w-5 h-5" />}
+                        {cat.icon === 'ListChecks' && <ListChecks className="w-5 h-5" />}
+                      </div>
+                      <h4 className="text-sm font-semibold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors">{cat.title}</h4>
+                      <p className="text-xs text-slate-500">{cat.count}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Recent Articles / Tab Content */}
+          <div className="mb-10">
+            <div className="flex items-baseline justify-between mb-4">
+              <h3 className="text-xl font-serif text-slate-800">
+                {activeTab === 'Overview' ? 'Recent & Pinned Articles' : `${activeTab}`}
+              </h3>
+              {activeTab === 'Overview' && <button onClick={() => handleNavigate('browse')} className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors">View all</button>}
+            </div>
+            {tabArticles.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 auto-rows-fr">
+                {tabArticles.slice(0, activeTab === 'Overview' ? 4 : undefined).map(article => (
+                  <React.Fragment key={article.id}>{renderArticleCard({ article })}</React.Fragment>
+                ))}
+              </div>
+            ) : (
+                <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl text-slate-500">
+                  No articles found.
+                </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {activeTab === 'Compliance' && (
+        <div className="mb-8">
+          <h3 className="text-xl font-serif text-slate-800 mb-4">Compliance Status</h3>
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+            {mockCompliance.map((item, i, arr) => (
+              <div key={item.id} className={`flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors ${i !== arr.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                <div className="flex items-center gap-3 text-sm font-medium text-slate-700">
+                  <Shield className="w-4 h-4 text-slate-400" />
+                  {item.text}
+                </div>
+                <Badge colorClass={`${item.color}`}>{item.status}</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'Audit Trail' && (
+        <div className="bg-white border border-slate-200 rounded-xl p-6 text-center shadow-sm">
+          <History className="w-8 h-8 text-slate-300 mx-auto mb-3" />
+          <h3 className="text-lg font-medium text-slate-700 mb-2">Audit Trail</h3>
+          <p className="text-sm text-slate-500 mb-4">View complete history of article modifications, approvals, and flags.</p>
+          <button onClick={() => handleNavigate('audit')} className="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors rounded-lg text-sm font-medium">Open full trail</button>
+        </div>
+      )}
+
+      <div className="h-8"></div>
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col h-screen bg-slate-50 font-sans text-slate-900 overflow-hidden">
+      {renderTopbar()}
+      
+      <div className="flex flex-1 overflow-hidden">
+        {renderSidebar()}
+        <main className="flex-1 overflow-y-auto w-full">
+          {currentView === 'dashboard' && renderDashboardView()}
+          {currentView === 'browse' && renderBrowseView()}
+          {currentView === 'article' && renderArticleDetailView()}
+          {currentView === 'editor' && <EditorView onNavigate={handleNavigate} />}
+          {currentView === 'audit' && renderAuditView()}
+          {currentView === 'analytics' && renderAnalyticsView()}
+        </main>
+        {currentView !== 'editor' && currentView !== 'article' && renderRightPanel()}
+      </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200">
+              <h3 className="font-semibold text-slate-800">Settings</h3>
+              <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5"/></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Theme</label>
+                <select className="w-full border-slate-300 rounded-lg text-sm p-2 bg-slate-50">
+                  <option>Light Mode</option>
+                  <option>Dark Mode</option>
+                  <option>System Default</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-slate-700 block mb-1">Email Notifications</label>
+                 <select className="w-full border-slate-300 rounded-lg text-sm p-2 bg-slate-50">
+                  <option>All activity</option>
+                  <option>Mentions only</option>
+                  <option>Disabled</option>
+                </select>
+              </div>
+            </div>
+            <div className="p-4 border-t border-slate-200 bg-slate-50 text-right">
+              <button onClick={() => setShowSettings(false)} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Popover */}
+      {showNotifs && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowNotifs(false)}>
+          <div className="absolute top-14 right-16 w-80 bg-white rounded-xl shadow-xl border border-slate-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-3 border-b border-slate-200 bg-slate-50">
+              <h3 className="font-semibold text-slate-800 text-sm">Notifications</h3>
+              <button onClick={() => setShowNotifs(false)} className="text-slate-400 hover:text-slate-600"><X className="w-4 h-4"/></button>
+            </div>
+            <div className="divide-y divide-slate-100 max-h-96 overflow-auto">
+              <div className="p-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                <p className="text-sm text-slate-800 font-medium mb-0.5">Article Approved</p>
+                <p className="text-xs text-slate-500">Your article "Setting up VPN" has been approved by Security.</p>
+                <p className="text-[10px] text-slate-400 mt-2">10m ago</p>
+              </div>
+              <div className="p-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                <p className="text-sm text-slate-800 font-medium mb-0.5">Review Requested</p>
+                <p className="text-xs text-slate-500">AT requested your review on "Multi-Region Azure Deployment Guide".</p>
+                <p className="text-[10px] text-slate-400 mt-2">1h ago</p>
+              </div>
+              <div className="p-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                <p className="text-sm text-slate-800 font-medium mb-0.5">New Policy Published</p>
+                <p className="text-xs text-slate-500">Please review the updated "Information Security Policy 2026".</p>
+                <p className="text-[10px] text-slate-400 mt-2">1d ago</p>
+              </div>
+            </div>
+            <div className="p-2 border-t border-slate-200 bg-slate-50 text-center">
+              <button className="text-xs font-medium text-blue-600 hover:text-blue-800">Mark all as read</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
+
