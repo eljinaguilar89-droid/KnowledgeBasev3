@@ -4,9 +4,10 @@ import path from "path";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { db } from "./src/db/index.js";
-import { articles } from "./src/db/schema.js";
+import { articles, users } from "./src/db/schema.js";
 import { mockArticles } from "./src/data.js";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +21,74 @@ async function startServer() {
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
+  });
+
+  app.post("/api/auth/signup", async (req, res) => {
+    try {
+      const { email, password, name, role } = req.body;
+      if (!email || !password || !name) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      const existingUser = await db.select().from(users).where(eq(users.email, email));
+      if (existingUser.length > 0) {
+        return res.status(400).json({ error: "Email already exists" });
+      }
+      const hashedPassword = await bcrypt.hash(password, 10);
+      const id = Date.now().toString();
+      const newUser = await db.insert(users).values({
+        id, email, name, role: role || "Viewer", password: hashedPassword
+      }).returning({ id: users.id, email: users.email, name: users.name, role: users.role });
+      res.status(201).json(newUser[0]);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  app.post("/api/auth/signin", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      if (!email || !password) {
+        return res.status(400).json({ error: "Missing email or password" });
+      }
+      const userList = await db.select().from(users).where(eq(users.email, email));
+      if (userList.length === 0) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      const user = userList[0];
+      const match = await bcrypt.compare(password, user.password);
+      if (!match) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  app.get("/api/users", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) return res.json([]);
+      const allUsers = await db.select({ id: users.id, email: users.email, name: users.name, role: users.role }).from(users);
+      res.json(allUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.put("/api/users/:id/role", async (req, res) => {
+    try {
+      const { role } = req.body;
+      if (!process.env.DATABASE_URL) return res.json({ id: req.params.id, role });
+      const updated = await db.update(users).set({ role }).where(eq(users.id, req.params.id)).returning({ id: users.id, email: users.email, name: users.name, role: users.role });
+      if (updated.length === 0) return res.status(404).json({ error: "User not found" });
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Error updating user role:", error);
+      res.status(500).json({ error: "Failed to update user role" });
+    }
   });
 
   app.get("/api/articles", async (req, res) => {
@@ -55,6 +124,23 @@ async function startServer() {
     } catch (error) {
       console.error("Error creating article:", error);
       res.status(500).json({ error: "Failed to create article" });
+    }
+  });
+
+  app.put("/api/articles/:id", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        return res.json({ ...req.body, id: req.params.id });
+      }
+      const updated = await db.update(articles)
+        .set(req.body)
+        .where(eq(articles.id, req.params.id))
+        .returning();
+      if (updated.length === 0) return res.status(404).json({ error: "Article not found" });
+      res.json(updated[0]);
+    } catch (error) {
+      console.error("Error updating article:", error);
+      res.status(500).json({ error: "Failed to update article" });
     }
   });
 
