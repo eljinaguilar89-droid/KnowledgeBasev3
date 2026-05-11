@@ -482,6 +482,15 @@ export default function App() {
                     key={n.id}
                     onClick={() => {
                       setReadNotifs(prev => new Set(prev).add(n.id));
+                      if (n.id.startsWith("rev-")) {
+                        handleNavigate("dashboard");
+                        setActiveTab("To Review & Publish");
+                        setShowNotifs(false);
+                      } else if (n.id.startsWith("pub-")) {
+                        handleNavigate("dashboard");
+                        setActiveTab("My Articles");
+                        setShowNotifs(false);
+                      }
                     }}
                     className={`p-4 cursor-pointer transition-colors ${
                       !readNotifs.has(n.id) 
