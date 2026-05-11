@@ -13,6 +13,7 @@ import { ManualView } from "./views/ManualView";
 import { SystemLogsView } from "./views/SystemLogsView";
 import { useAuth } from "./AuthContext";
 import { ApiIntegrationView } from "./views/ApiIntegrationView";
+import { AiChatDrawer } from "./components/AiChatDrawer";
 
 export default function App() {
   const { user } = useAuth();
@@ -77,6 +78,7 @@ export default function App() {
   }, [selectedArticleId]);
 
   const [showSettings, setShowSettings] = useState(false);
+  const [showAiChat, setShowAiChat] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [readNotifs, setReadNotifs] = useState<Set<string>>(() => {
@@ -289,6 +291,7 @@ export default function App() {
         setSearchQuery={setSearchQuery}
         setShowNotifs={setShowNotifs}
         setShowSettings={setShowSettings}
+        setShowAiChat={setShowAiChat}
         isDarkMode={isDarkMode}
         hasNotifs={notificationsEnabled && unreadNotifs.length > 0}
       />
@@ -364,6 +367,13 @@ export default function App() {
           />
         )}
       </div>
+
+      <AiChatDrawer 
+        isOpen={showAiChat} 
+        onClose={() => setShowAiChat(false)} 
+        isDarkMode={isDarkMode} 
+        articles={articles} 
+      />
 
       {/* Settings Modal */}
       {showSettings && (

@@ -25,6 +25,7 @@ import {
   UserCog,
   Book,
   Terminal,
+  Sparkles
 } from "lucide-react";
 import { IconButton } from "./ui";
 import { mockActivities } from "../data";
@@ -36,6 +37,7 @@ export const Topbar = ({
   setSearchQuery,
   setShowNotifs,
   setShowSettings,
+  setShowAiChat,
   isDarkMode,
   hasNotifs,
 }: any) => {
@@ -111,6 +113,11 @@ export const Topbar = ({
         <IconButton
           icon={Settings}
           onClick={() => setShowSettings(true)}
+          isDarkMode={isDarkMode}
+        />
+        <IconButton
+          icon={Sparkles}
+          onClick={() => setShowAiChat && setShowAiChat(true)}
           isDarkMode={isDarkMode}
         />
         <div className="relative" ref={profileMenuRef}>
