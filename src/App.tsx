@@ -209,7 +209,9 @@ export default function App() {
   // Tab filtered articles for dashboard
   let tabArticles = visibleArticles;
   if (activeTab === "My Articles") {
-    tabArticles = visibleArticles.filter((a) => a.author === user.name);
+    tabArticles = visibleArticles.filter((a) => a.status === "Published" && a.author === user.name);
+  } else if (activeTab === "My Drafts") {
+    tabArticles = visibleArticles.filter((a) => a.status === "Draft" && a.author === user.name);
   } else if (activeTab === "My Pending Reviews") {
     tabArticles = visibleArticles.filter((a) => a.status === "Pending" && a.author === user.name);
   } else if (activeTab === "To Review & Publish") {
@@ -252,6 +254,17 @@ export default function App() {
         id: `pub-${a.id}`,
         title: "Article Published",
         message: `Your article "${a.title}" has been published.`,
+        date: a.createdAt || a.date,
+        timeMs: new Date(a.createdAt || Date.now()).getTime(),
+      });
+    });
+
+    const pendingMine = articles.filter((a) => a.author === user.name && a.status === "Pending");
+    pendingMine.forEach((a) => {
+      notifications.push({
+        id: `pend-${a.id}`,
+        title: "Article Pending Review",
+        message: `Your article "${a.title}" is submitted and pending review.`,
         date: a.createdAt || a.date,
         timeMs: new Date(a.createdAt || Date.now()).getTime(),
       });
@@ -486,9 +499,9 @@ export default function App() {
                         handleNavigate("dashboard");
                         setActiveTab("To Review & Publish");
                         setShowNotifs(false);
-                      } else if (n.id.startsWith("pub-")) {
+                      } else if (n.id.startsWith("pub-") || n.id.startsWith("pend-")) {
                         handleNavigate("dashboard");
-                        setActiveTab("My Articles");
+                        setActiveTab(n.id.startsWith("pub-") ? "My Articles" : "My Pending Reviews");
                         setShowNotifs(false);
                       }
                     }}

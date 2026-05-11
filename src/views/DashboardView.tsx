@@ -96,6 +96,9 @@ export const DashboardView = ({
   const uniqueTeams = new Set(allArticles.map((a: any) => a.category)).size;
 
   let tabsToMap = ["Overview"];
+  
+  const hasDrafts = allArticles.some((a: any) => a.status === "Draft" && a.author === user?.name);
+
   if (user?.role === "DevOps Engineer") {
     tabsToMap = ["Overview", "My Articles", "My Pending Reviews"];
   } else if (user?.role === "DevOps & Infra Manager" || user?.role === "Sec & Comp. Manager") {
@@ -107,6 +110,15 @@ export const DashboardView = ({
       "To Review & Publish",
       "Compliance",
     ];
+  }
+
+  if (hasDrafts && !tabsToMap.includes("My Drafts")) {
+    const insertIdx = tabsToMap.indexOf("To Review & Publish");
+    if (insertIdx !== -1) {
+      tabsToMap.splice(insertIdx + 1, 0, "My Drafts");
+    } else {
+      tabsToMap.push("My Drafts");
+    }
   }
 
   return (
@@ -157,6 +169,7 @@ export const DashboardView = ({
         activeTab === "My Articles" ||
         activeTab === "Pending Review" ||
         activeTab === "My Pending Reviews" ||
+        activeTab === "My Drafts" ||
         activeTab === "To Review & Publish") && (
         <>
           {activeTab === "Overview" && (

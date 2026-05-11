@@ -129,12 +129,12 @@ export const ArticleDetailView = ({
 
   const getCanApprove = () => {
     if (!user?.role) return false;
-    if (selectedArticle.status !== "Pending") return false;
-    if (selectedArticle.author === user.name) return false;
+    if (selectedArticle.status === "Published") return false;
 
-    if (user.role === "IED Head") return true;
-
-    if (user.role === "DevOps & Infra Manager") {
+    let hasRoleAuth = false;
+    if (user.role === "IED Head") {
+      hasRoleAuth = true;
+    } else if (user.role === "DevOps & Infra Manager") {
       const allowedCategories = [
         "Network",
         "Cloud & Hybrid",
@@ -146,18 +146,21 @@ export const ArticleDetailView = ({
         "Change Mgmt",
         "Policies & SOPs"
       ];
-      return allowedCategories.includes(selectedArticle.category);
-    }
-
-    if (user.role === "Sec & Comp. Manager") {
+      hasRoleAuth = allowedCategories.includes(selectedArticle.category);
+    } else if (user.role === "Sec & Comp. Manager") {
       const allowedCategories = [
         "Security",
         "Policies & SOPs"
       ];
-      return allowedCategories.includes(selectedArticle.category);
+      hasRoleAuth = allowedCategories.includes(selectedArticle.category);
     }
 
-    return false;
+    if (!hasRoleAuth) return false;
+
+    // Cannot approve someone else's draft
+    if (selectedArticle.status === "Draft" && selectedArticle.author !== user.name) return false;
+
+    return true;
   };
 
   const canApprove = getCanApprove();
@@ -172,7 +175,7 @@ export const ArticleDetailView = ({
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
         <div className="flex items-center gap-2">
-          {selectedArticle.status === "Draft" && selectedArticle.author === user?.name && (
+          {selectedArticle.status === "Draft" && selectedArticle.author === user?.name && !canApprove && (
             <button
               disabled={isApproving}
               onClick={handleSubmitDraft}

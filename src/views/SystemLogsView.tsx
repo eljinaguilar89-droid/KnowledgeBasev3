@@ -17,7 +17,7 @@ export const SystemLogsView = ({ isDarkMode }: { isDarkMode: boolean }) => {
 [${date} 02:30:10] INFO  User 'admin' uploaded attachment
 [${date} 03:45:00] WARN  Database query slow (500ms) - SELECT * FROM articles
 [${date} 05:22:15] INFO  Background sync completed normally
-[${date} 06:10:05] ERROR UI Render Error in ArticleDetailView - invalid prop
+[${date} 06:10:05] INFO  UI Rendered effectively in ArticleDetailView
 [${date} 07:05:44] INFO  System health check: OK
 `;
   };
