@@ -4,7 +4,7 @@ import path from "path";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { db } from "./src/db/index.js";
-import { articles, users, categories } from "./src/db/schema.js";
+import { articles, users, categories, systemLogs } from "./src/db/schema.js";
 import { mockArticles, mockCategories } from "./src/data.js";
 import { desc, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -24,6 +24,53 @@ async function startServer() {
 
   let inMemoryCategories = [...mockCategories];
 
+  let inMemoryLogs: any[] = [
+    { id: "1", level: "INFO", message: "System startup complete", date: new Date().toISOString().split('T')[0], createdAt: new Date() }
+  ];
+
+  app.get("/api/logs", async (req, res) => {
+    try {
+      const date = req.query.date as string;
+      if (!date) return res.status(400).json({ error: "Missing date query parameter" });
+
+      if (!process.env.DATABASE_URL) {
+        return res.json(inMemoryLogs.filter(l => l.date === date));
+      }
+
+      const logs = await db.select().from(systemLogs).where(eq(systemLogs.date, date)).orderBy(desc(systemLogs.createdAt));
+      res.json(logs);
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      res.status(500).json({ error: "Failed to fetch logs" });
+    }
+  });
+
+  app.post("/api/logs", async (req, res) => {
+    try {
+      const { level, message, date } = req.body;
+      if (!level || !message || !date) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (!process.env.DATABASE_URL) {
+        const newLog = { id: Date.now().toString(), level, message, date, createdAt: new Date() };
+        inMemoryLogs.unshift(newLog);
+        return res.status(201).json(newLog);
+      }
+
+      const newLog = await db.insert(systemLogs).values({
+        id: Date.now().toString(),
+        level,
+        message,
+        date
+      }).returning();
+      res.status(201).json(newLog[0]);
+    } catch (error) {
+      console.error("Error creating log:", error);
+      res.status(500).json({ error: "Failed to create log" });
+    }
+  });
+
   app.get("/api/categories", async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
@@ -41,6 +88,24 @@ async function startServer() {
       res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
+
+  const logEvent = async (level: string, message: string) => {
+    try {
+      const date = new Date().toISOString().split('T')[0];
+      if (!process.env.DATABASE_URL) {
+        inMemoryLogs.unshift({ id: Date.now().toString(), level, message, date, createdAt: new Date() });
+        return;
+      }
+      await db.insert(systemLogs).values({
+        id: Date.now().toString(),
+        level,
+        message,
+        date
+      });
+    } catch (e) {
+      console.error("Failed to log event", e);
+    }
+  };
 
   app.post("/api/categories", async (req, res) => {
     try {
@@ -77,6 +142,7 @@ async function startServer() {
       const newUser = await db.insert(users).values({
         id, email, name, role: role || "NEO", password: hashedPassword
       }).returning({ id: users.id, email: users.email, name: users.name, role: users.role, apiKey: users.apiKey });
+      await logEvent("INFO", `New user created: ${email}`);
       res.status(201).json(newUser[0]);
     } catch (error) {
       console.error(error);
@@ -99,6 +165,7 @@ async function startServer() {
       if (!match) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
+      await logEvent("INFO", `User logged in: ${user.email}`);
       res.json({ id: user.id, email: user.email, name: user.name, role: user.role, apiKey: user.apiKey });
     } catch (error) {
       console.error(error);
@@ -280,9 +347,11 @@ async function startServer() {
       if (!process.env.DATABASE_URL) {
         const newArt = { ...req.body, id: Date.now().toString() };
         inMemoryArticles.unshift(newArt);
+        await logEvent("INFO", `Article created (memory): ${newArt.title}`);
         return res.status(201).json(newArt);
       }
       const newArticle = await db.insert(articles).values(req.body).returning();
+      await logEvent("INFO", `Article created: ${newArticle[0].title}`);
       res.status(201).json(newArticle[0]);
     } catch (error) {
       console.error("Error creating article:", error);
@@ -296,6 +365,7 @@ async function startServer() {
         const ix = inMemoryArticles.findIndex(a => a.id === req.params.id);
         if (ix !== -1) {
           inMemoryArticles[ix] = { ...inMemoryArticles[ix], ...req.body, id: req.params.id };
+          await logEvent("INFO", `Article updated (memory): ${inMemoryArticles[ix].title}`);
           return res.json(inMemoryArticles[ix]);
         }
         return res.status(404).json({ error: "Not found" });
@@ -305,6 +375,7 @@ async function startServer() {
         .where(eq(articles.id, req.params.id))
         .returning();
       if (updated.length === 0) return res.status(404).json({ error: "Article not found" });
+      await logEvent("INFO", `Article updated: ${updated[0].title}`);
       res.json(updated[0]);
     } catch (error) {
       console.error("Error updating article:", error);

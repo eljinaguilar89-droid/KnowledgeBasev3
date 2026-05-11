@@ -20,6 +20,14 @@ export const categories = pgTable("categories", {
   group: text("group").notNull(),
 });
 
+export const systemLogs = pgTable("system_logs", {
+  id: text("id").primaryKey(),
+  level: text("level").notNull(),
+  message: text("message").notNull(),
+  date: text("date").notNull(), // ISO date "YYYY-MM-DD"
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 export const articles = pgTable("articles", {
   id: text("id").primaryKey(),
   title: text("title").notNull(),

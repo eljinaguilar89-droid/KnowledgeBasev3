@@ -1,31 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Terminal, Download, Calendar } from 'lucide-react';
 
 export const SystemLogsView = ({ isDarkMode }: { isDarkMode: boolean }) => {
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Mock logs for demonstration
-  const generateLogsForDate = (date: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    if (date !== today && date !== "2026-05-10") { // just today and an arbitrary past date for demo
-      return "";
-    }
-    return `[${date} 00:00:01] INFO  System startup complete
-[${date} 00:05:23] WARN  API rate limit approached for endpoint /api/articles
-[${date} 01:12:45] ERROR Auth service timeout - Retrying...
-[${date} 01:12:47] INFO  Auth service connected
-[${date} 02:30:10] INFO  User 'admin' uploaded attachment
-[${date} 03:45:00] WARN  Database query slow (500ms) - SELECT * FROM articles
-[${date} 05:22:15] INFO  Background sync completed normally
-[${date} 06:10:05] INFO  UI Rendered effectively in ArticleDetailView
-[${date} 07:05:44] INFO  System health check: OK
-`;
-  };
+  useEffect(() => {
+    const fetchLogs = async () => {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/api/logs?date=${selectedDate}`);
+        if (!res.ok) throw new Error("Failed to fetch logs");
+        const data = await res.json();
+        setLogs(data);
+      } catch (err) {
+        console.error(err);
+        setLogs([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchLogs();
+  }, [selectedDate]);
 
-  const currentLogs = generateLogsForDate(selectedDate);
+  const currentLogsStr = logs.length > 0 
+    ? logs.map(l => `[${new Date(l.createdAt).toISOString().replace('T', ' ').substring(0, 19)}] ${l.level.padEnd(5)} ${l.message}`).join('\n')
+    : "";
 
   const handleDownload = () => {
-    const blob = new Blob([currentLogs], { type: 'text/plain' });
+    if (!currentLogsStr) return;
+    const blob = new Blob([currentLogsStr], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -58,7 +63,11 @@ export const SystemLogsView = ({ isDarkMode }: { isDarkMode: boolean }) => {
               className={`px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-300 text-slate-700"}`}
             />
           </div>
-          {currentLogs ? (
+          {isLoading ? (
+            <div className={`text-sm py-2 italic flex items-center gap-2 border rounded-lg px-4 ${isDarkMode ? "text-slate-400 border-slate-700" : "text-slate-500 border-slate-200"}`}>
+               Loading...
+            </div>
+          ) : currentLogsStr ? (
             <button 
                onClick={handleDownload}
                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
@@ -66,7 +75,7 @@ export const SystemLogsView = ({ isDarkMode }: { isDarkMode: boolean }) => {
                <Download className="w-4 h-4" /> Download Logs
             </button>
           ) : (
-            <div className={`text-sm py-2 italic ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+            <div className={`text-sm py-2 px-4 italic border rounded-lg ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"}`}>
               No logs found
             </div>
           )}
