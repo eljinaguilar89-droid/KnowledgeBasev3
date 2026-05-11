@@ -15,7 +15,7 @@ export const AuditView = ({ isDarkMode }: { isDarkMode?: boolean }) => {
           Audit Trail
         </h2>
         
-        {user?.role === "Admin" && (
+        {(user?.role === "IED Head" || user?.role === "DevOps & Infra Manager" || user?.role === "Sec & Comp. Manager") && (
           <button 
             onClick={() => alert("CSV Download Initiated")}
             className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-colors shadow-sm ${isDarkMode ? "bg-slate-800 text-slate-200 hover:bg-slate-700 border border-slate-700" : "bg-white text-slate-700 hover:bg-slate-50 border border-slate-200"}`}

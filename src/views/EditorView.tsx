@@ -23,10 +23,12 @@ export const EditorView = ({
   onNavigate,
   isDarkMode,
   refreshArticles,
+  categories = [],
 }: {
   onNavigate: (view: any) => void;
   isDarkMode?: boolean;
   refreshArticles?: () => void;
+  categories?: any[];
 }) => {
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
@@ -62,11 +64,33 @@ export const EditorView = ({
     const contentStr = contentRef.current?.innerText || "No content provided.";
     setIsSubmitting(true);
 
+    let finalStatus: "Draft" | "Pending" | "Published" = status;
+    if (status === "Pending" && user?.role) {
+      if (user.role === "IED Head") {
+        finalStatus = "Published";
+      } else if (user.role === "DevOps & Infra Manager") {
+        const allowed = [
+          "Network",
+          "Cloud & Hybrid",
+          "Databases",
+          "DR/BCP",
+          "Dev Structure",
+          "DevOps",
+          "API Catalog",
+          "Change Mgmt",
+          "Policies & SOPs"
+        ];
+        if (allowed.includes(category)) finalStatus = "Published";
+      } else if (user.role === "Sec & Comp. Manager") {
+        const allowed = ["Security", "Policies & SOPs"];
+        if (allowed.includes(category)) finalStatus = "Published";
+      }
+    }
+
     try {
       const newArticle = {
         id: Math.random().toString(36).substr(2, 9),
         title: title,
-        version: "v1.0",
         badge: status === "Draft" ? "Draft" : "",
         excerpt: contentStr.substring(0, 80) + "...",
         content: contentStr,
@@ -75,7 +99,7 @@ export const EditorView = ({
         categoryColor: "bg-blue-100 text-blue-800",
         categoryIcon: "FileText",
         author: user?.name || "Anonymous",
-        status: status,
+        status: finalStatus,
         date: "Just now",
         views: 0,
       };
@@ -95,6 +119,19 @@ export const EditorView = ({
       setIsSubmitting(false);
     }
   };
+
+  const isManager = user?.role && ["DevOps & Infra Manager", "Sec & Comp. Manager"].includes(user.role);
+  const isHead = user?.role === "IED Head";
+  
+  let willPublishDirectly = false;
+  if (isHead) willPublishDirectly = true;
+  else if (user?.role === "DevOps & Infra Manager") {
+    willPublishDirectly = [
+      "Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"
+    ].includes(category);
+  } else if (user?.role === "Sec & Comp. Manager") {
+    willPublishDirectly = ["Security", "Policies & SOPs"].includes(category);
+  }
 
   return (
     <div className="max-w-4xl mx-auto py-8 px-6 transition-colors">
@@ -141,22 +178,13 @@ export const EditorView = ({
                 onChange={(e) => setCategory(e.target.value)}
                 className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-300 text-slate-800"}`}
               >
-                <optgroup label="Infrastructure">
-                  <option>Network</option>
-                  <option>Cloud & Hybrid</option>
-                  <option>Databases</option>
-                  <option>Security</option>
-                  <option>DR/BCP</option>
-                </optgroup>
-                <optgroup label="Engineering">
-                  <option>Engineering</option>
-                  <option>CI/CD & DevOps</option>
-                  <option>API Catalog</option>
-                  <option>Change Mgmt</option>
-                </optgroup>
-                <optgroup label="Governance">
-                  <option>Policies & SOPs</option>
-                </optgroup>
+                {Array.from(new Set(categories.map((c: any) => c.group))).map((groupName: any) => (
+                  <optgroup key={groupName} label={groupName}>
+                    {categories.filter((c: any) => c.group === groupName).map((c: any) => (
+                      <option key={c.id || c.filterCategory} value={c.filterCategory}>{c.title}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
             </div>
             <div>
@@ -393,10 +421,10 @@ export const EditorView = ({
             className="flex items-center gap-2 px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-lg shadow-blue-500/20 disabled:opacity-50"
           >
             {isSubmitting ? (
-              "Submitting..."
+              willPublishDirectly ? "Publishing..." : "Submitting..."
             ) : (
               <>
-                <Send className="w-4 h-4" /> Submit for Review
+                <Send className="w-4 h-4" /> {willPublishDirectly ? "Publish Article" : "Submit for Review"}
               </>
             )}
           </button>

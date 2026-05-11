@@ -32,7 +32,19 @@ export default function App() {
   const [browsePage, setBrowsePage] = useState(1);
   const [articlePage, setArticlePage] = useState(1);
   const [articles, setArticles] = useState<any[]>(mockArticles);
-  const ITEMS_PER_PAGE = 6;
+  const [categories, setCategories] = useState<any[]>([]);
+  const ITEMS_PER_PAGE = 9;
+
+  const fetchCategories = () => {
+    fetch("/api/categories")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setCategories(data);
+        }
+      })
+      .catch(console.error);
+  };
 
   const fetchArticles = () => {
     return fetch("/api/articles")
@@ -48,6 +60,7 @@ export default function App() {
   useEffect(() => {
     if (user) {
       fetchArticles();
+      fetchCategories();
     }
   }, [user]);
 
@@ -61,6 +74,18 @@ export default function App() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [readNotifs, setReadNotifs] = useState<Set<string>>(() => {
+    try {
+      const stored = localStorage.getItem('readNotifs');
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('readNotifs', JSON.stringify(Array.from(readNotifs)));
+  }, [readNotifs]);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const handleNavigate = (
@@ -77,8 +102,8 @@ export default function App() {
     // Viewer cannot see editor
     if (view === "editor" && user?.role === "Viewer") return;
     // Only Admin can see audit / users
-    if (view === "audit" && user?.role !== "Admin") return;
-    if (view === "users" && user?.role !== "Admin") return;
+    if (view === "audit" && !["IED Head", "DevOps & Infra Manager", "Sec & Comp. Manager"].includes(user?.role || "")) return;
+    if (view === "users" && user?.role !== "IED Head") return;
 
     setCurrentView(view);
     if (id) setSelectedArticleId(id);
@@ -92,34 +117,83 @@ export default function App() {
   const selectedArticle = articles.find((a) => a.id === selectedArticleId);
 
   // Derived state based on user role
-  let visibleArticles = articles;
-  if (user.role === "Viewer") {
-    visibleArticles = articles.filter((a) =>
-      ["Public", "Internal"].includes(a.accessLevel),
-    );
-  } else if (user.role === "Author") {
-    visibleArticles = articles.filter(
-      (a) =>
-        ["Public", "Internal"].includes(a.accessLevel) ||
-        a.author === user.name,
-    );
-  } else if (user.role === "Approver") {
-    visibleArticles = articles.filter(
-      (a) =>
-        ["Public", "Internal", "Confidential"].includes(a.accessLevel) ||
-        a.author === user.name,
-    );
-  } // Admin sees everything
+  let visibleArticles = articles.filter(a => {
+    // If author is current user, they can always see it regardless of access level
+    if (user && a.author === user.name) return true;
+
+    const level = a.accessLevel || "Public";
+
+    if (level === "Restricted") {
+      return false; // only author can see, handled above
+    }
+
+    if (level === "Confidential") {
+      return user && user.role === "IED Head";
+    }
+
+    if (level === "Internal") {
+      // open for per category only
+      if (user && user.role === "IED Head") return true; // Assuming IED Head sees all internal
+      
+      const category = a.category;
+      if (user && user.role === "DevOps & Infra Manager") {
+        return [
+          "Network",
+          "Cloud & Hybrid",
+          "Databases",
+          "DR/BCP",
+          "Dev Structure",
+          "DevOps",
+          "API Catalog",
+          "Change Mgmt",
+          "Policies & SOPs"
+        ].includes(category);
+      }
+      if (user && user.role === "Sec & Comp. Manager") {
+        return ["Security", "Policies & SOPs"].includes(category);
+      }
+      if (user && user.role === "DevOps Engineer") {
+        // According to user: "if created under infra subcategory, role that can see infra can only see it"
+        // Let's scope DevOps Engineer to these based on their likely coverage:
+        return [
+          "Dev Structure",
+          "DevOps",
+          "API Catalog",
+          "Change Mgmt"
+        ].includes(category);
+      }
+      
+      return false;
+    }
+
+    // Public
+    return true;
+  });
 
   let filteredArticles = visibleArticles.filter(
     (a) => a.status === "Published",
   );
-  if (searchQuery)
+  if (searchQuery) {
     filteredArticles = filteredArticles.filter(
       (a) =>
         a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         a.excerpt.toLowerCase().includes(searchQuery.toLowerCase()),
     );
+    // Sort by views descending
+    filteredArticles.sort((a, b) => {
+      // Parse views which are strings like "1.2k" or "842"
+      const parseViews = (v: string | number) => {
+        if (typeof v === 'number') return v;
+        if (!v) return 0;
+        const s = v.toString();
+        if (s.endsWith('k')) return parseFloat(s) * 1000;
+        return parseFloat(s);
+      };
+      const vA = parseViews(a.views);
+      const vB = parseViews(b.views);
+      return vB - vA;
+    });
+  }
   if (selectedCategory !== "All Categories")
     filteredArticles = filteredArticles.filter(
       (a) => a.category === selectedCategory,
@@ -127,11 +201,78 @@ export default function App() {
 
   // Tab filtered articles for dashboard
   let tabArticles = visibleArticles;
-  if (activeTab === "My Articles")
+  if (activeTab === "My Articles") {
     tabArticles = visibleArticles.filter((a) => a.author === user.name);
-  else if (activeTab === "Pending Review")
-    tabArticles = visibleArticles.filter((a) => a.status === "Pending");
-  else tabArticles = visibleArticles.filter((a) => a.status === "Published");
+  } else if (activeTab === "My Pending Reviews") {
+    tabArticles = visibleArticles.filter((a) => a.status === "Pending" && a.author === user.name);
+  } else if (activeTab === "To Review & Publish") {
+    tabArticles = visibleArticles.filter((a) => {
+      if (a.status !== "Pending") return false;
+      if (a.author === user.name) return false;
+      
+      if (user.role === "IED Head") return true;
+
+      if (user.role === "DevOps & Infra Manager") {
+        return [
+          "Network",
+          "Cloud & Hybrid",
+          "Databases",
+          "DR/BCP",
+          "Dev Structure",
+          "DevOps",
+          "API Catalog",
+          "Change Mgmt",
+          "Policies & SOPs"
+        ].includes(a.category);
+      }
+      if (user.role === "Sec & Comp. Manager") {
+        return [
+          "Security",
+          "Policies & SOPs"
+        ].includes(a.category);
+      }
+      return false;
+    });
+  } else {
+    tabArticles = visibleArticles.filter((a) => a.status === "Published");
+  }
+
+  let notifications: any[] = [];
+  if (user) {
+    const publishedMine = articles.filter((a) => a.author === user.name && a.status === "Published");
+    publishedMine.forEach((a) => {
+      notifications.push({
+        id: `pub-${a.id}`,
+        title: "Article Published",
+        message: `Your article "${a.title}" has been published.`,
+        date: a.createdAt || a.date,
+        timeMs: new Date(a.createdAt || Date.now()).getTime(),
+      });
+    });
+
+    let toReview: any[] = [];
+    if (user.role === "IED Head") {
+        toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name);
+    } else if (user.role === "DevOps & Infra Manager") {
+        toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name && ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category));
+    } else if (user.role === "Sec & Comp. Manager") {
+        toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name && ["Security", "Policies & SOPs"].includes(a.category));
+    }
+
+    toReview.forEach((a) => {
+      notifications.push({
+        id: `rev-${a.id}`,
+        title: "Review Requested",
+        message: `${a.author} requested your review on "${a.title}".`,
+        date: a.createdAt || a.date,
+        timeMs: new Date(a.createdAt || Date.now()).getTime(),
+      });
+    });
+
+    notifications = notifications.sort((a,b) => b.timeMs - a.timeMs).slice(0, 10);
+  }
+
+  const unreadNotifs = notifications.filter(n => !readNotifs.has(n.id));
 
   return (
     <div
@@ -144,6 +285,7 @@ export default function App() {
         setShowNotifs={setShowNotifs}
         setShowSettings={setShowSettings}
         isDarkMode={isDarkMode}
+        hasNotifs={unreadNotifs.length > 0}
       />
 
       <div className="flex flex-1 overflow-hidden bg-inherit">
@@ -155,6 +297,7 @@ export default function App() {
           setSelectedCategory={setSelectedCategory}
           handleNavigate={handleNavigate}
           isDarkMode={isDarkMode}
+          categories={categories}
         />
         <main className="flex-1 overflow-y-auto w-full bg-inherit">
           {currentView === "dashboard" && (
@@ -162,9 +305,11 @@ export default function App() {
               activeTab={activeTab}
               setActiveTab={setActiveTab}
               tabArticles={tabArticles}
+              allArticles={visibleArticles}
               handleNavigate={handleNavigate}
               setSelectedCategory={setSelectedCategory}
               isDarkMode={isDarkMode}
+              categories={categories}
             />
           )}
           {currentView === "browse" && (
@@ -194,12 +339,13 @@ export default function App() {
               onNavigate={handleNavigate}
               isDarkMode={isDarkMode}
               refreshArticles={fetchArticles}
+              categories={categories}
             />
           )}
           {currentView === "audit" && <AuditView isDarkMode={isDarkMode} />}
           {currentView === "users" && <UsersView isDarkMode={isDarkMode} />}
           {currentView === "analytics" && (
-            <AnalyticsView isDarkMode={isDarkMode} />
+            <AnalyticsView isDarkMode={isDarkMode} allArticles={visibleArticles} />
           )}
         </main>
         {currentView !== "editor" && currentView !== "article" && (
@@ -207,6 +353,7 @@ export default function App() {
             handleNavigate={handleNavigate}
             setActiveTab={setActiveTab}
             isDarkMode={isDarkMode}
+            articles={articles}
           />
         )}
       </div>
@@ -307,69 +454,50 @@ export default function App() {
             <div
               className={`divide-y ${isDarkMode ? "divide-slate-800" : "divide-slate-100"} max-h-96 overflow-auto`}
             >
-              <div
-                className={`p-4 ${isDarkMode ? "hover:bg-slate-800/50" : "hover:bg-slate-50"} cursor-pointer transition-colors`}
-              >
-                <p
-                  className={`text-sm font-medium mb-1 ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}
-                >
-                  Article Approved
-                </p>
-                <p
-                  className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
-                >
-                  Your article "Setting up VPN" has been approved by Security.
-                </p>
-                <p
-                  className={`text-[10px] mt-2 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
-                >
-                  10m ago
-                </p>
-              </div>
-              <div
-                className={`p-4 ${isDarkMode ? "hover:bg-slate-800/50" : "hover:bg-slate-50"} cursor-pointer transition-colors`}
-              >
-                <p
-                  className={`text-sm font-medium mb-1 ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}
-                >
-                  Review Requested
-                </p>
-                <p
-                  className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
-                >
-                  AT requested your review on "Multi-Region Azure Deployment
-                  Guide".
-                </p>
-                <p
-                  className={`text-[10px] mt-2 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
-                >
-                  1h ago
-                </p>
-              </div>
-              <div
-                className={`p-4 ${isDarkMode ? "hover:bg-slate-800/50" : "hover:bg-slate-50"} cursor-pointer transition-colors`}
-              >
-                <p
-                  className={`text-sm font-medium mb-1 ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}
-                >
-                  New Policy Published
-                </p>
-                <p
-                  className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}
-                >
-                  Please review the updated "Information Security Policy 2026".
-                </p>
-                <p
-                  className={`text-[10px] mt-2 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
-                >
-                  1d ago
-                </p>
-              </div>
+              {notifications.length === 0 ? (
+                <div className={`p-6 text-center text-sm ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                  No new notifications.
+                </div>
+              ) : (
+                notifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      setReadNotifs(prev => new Set(prev).add(n.id));
+                    }}
+                    className={`p-4 cursor-pointer transition-colors ${
+                      !readNotifs.has(n.id) 
+                        ? (isDarkMode ? "bg-slate-800/80 hover:bg-slate-800" : "bg-blue-50/50 hover:bg-blue-50")
+                        : (isDarkMode ? "hover:bg-slate-800/50" : "hover:bg-slate-50")
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <p className={`text-sm font-medium ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}>
+                        {n.title}
+                      </p>
+                      {!readNotifs.has(n.id) && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                      )}
+                    </div>
+                    <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                      {n.message}
+                    </p>
+                    <p className={`text-[10px] mt-2 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
+                      {n.date === 'Just now' ? 'Just now' : new Date(n.timeMs).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' - ' + new Date(n.timeMs).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
             <div
               className={`p-3 border-t ${isDarkMode ? "border-slate-800 bg-slate-900" : "border-slate-200 bg-slate-50"} text-center`}
             >
-              <button className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors">
+              <button 
+                onClick={() => {
+                  setReadNotifs(new Set(notifications.map(n => n.id)));
+                }}
+                className="text-xs font-semibold text-blue-500 hover:text-blue-400 transition-colors"
+              >
                 Mark all as read
               </button>
             </div>

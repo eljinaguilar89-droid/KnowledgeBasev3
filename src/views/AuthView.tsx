@@ -7,9 +7,13 @@ export const AuthView = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"Viewer" | "Author" | "Approver" | "Admin">(
-    "Viewer",
-  );
+  const [role, setRole] = useState<
+    | "NEO"
+    | "DevOps Engineer"
+    | "DevOps & Infra Manager"
+    | "Sec & Comp. Manager"
+    | "IED Head"
+  >("NEO");
   const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -82,10 +86,11 @@ export const AuthView = () => {
                   onChange={(e) => setRole(e.target.value as any)}
                   className="w-full px-4 py-2 border rounded-xl dark:bg-slate-900 border-slate-300 dark:border-slate-700 dark:text-white"
                 >
-                  <option value="Viewer">Viewer - General Employee</option>
-                  <option value="Author">Author - Subject Matter Expert</option>
-                  <option value="Approver">Approver - Manager / Lead</option>
-                  <option value="Admin">Admin - IT / Security Team</option>
+                  <option value="NEO">NEO - Viewer</option>
+                  <option value="DevOps Engineer">DevOps Engineer - Author</option>
+                  <option value="DevOps & Infra Manager">DevOps & Infra Manager - Approver</option>
+                  <option value="Sec & Comp. Manager">Sec & Comp. Manager - Approver</option>
+                  <option value="IED Head">IED Head - Admin</option>
                 </select>
               </div>
             </>

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { ArrowLeft, Clock, Eye, CheckCircle } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { ArrowLeft, Clock, Eye, CheckCircle, User } from "lucide-react";
 import { Badge } from "../components/ui";
 import { useAuth } from "../AuthContext";
 
@@ -13,6 +13,22 @@ export const ArticleDetailView = ({
 }: any) => {
   const { user } = useAuth();
   const [isApproving, setIsApproving] = useState(false);
+  const viewIncrementedRef = React.useRef<string | null>(null);
+
+  useEffect(() => {
+    if (selectedArticle?.id && viewIncrementedRef.current !== selectedArticle.id) {
+      viewIncrementedRef.current = selectedArticle.id;
+      if (selectedArticle.status === "Published" || selectedArticle.status === "Pending") {
+        fetch(`/api/articles/${selectedArticle.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ views: (selectedArticle.views || 0) + 1 }),
+        });
+        // We do a manual UI bump for seamless experience without needing refresh immediately.
+        selectedArticle.views = (selectedArticle.views || 0) + 1;
+      }
+    }
+  }, [selectedArticle?.id]);
 
   if (!selectedArticle)
     return (
@@ -33,13 +49,16 @@ export const ArticleDetailView = ({
   const handleApprove = async () => {
     setIsApproving(true);
     try {
+      const newBadge = selectedArticle.badge === "Draft" ? "" : selectedArticle.badge;
       const res = await fetch(`/api/articles/${selectedArticle.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "Published" }),
+        body: JSON.stringify({ status: "Published", badge: newBadge }),
       });
       if (!res.ok) throw new Error("Failed to approve");
       if (refreshArticles) await refreshArticles();
+      selectedArticle.status = "Published";
+      selectedArticle.badge = newBadge;
       handleNavigate("dashboard");
     } catch (e) {
       console.error(e);
@@ -49,11 +68,94 @@ export const ArticleDetailView = ({
     }
   };
 
-  const canApprove =
-    user?.role &&
-    ["Approver", "Admin"].includes(user.role) &&
-    selectedArticle.status === "Pending" &&
-    selectedArticle.author !== user.name;
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this article?")) return;
+    setIsApproving(true);
+    try {
+      const res = await fetch(`/api/articles/${selectedArticle.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      if (refreshArticles) await refreshArticles();
+      handleNavigate("dashboard");
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete article");
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleSubmitDraft = async () => {
+    setIsApproving(true);
+    try {
+      // Check if user is a manager for this category
+      let autoApprove = false;
+      if (user?.role === "IED Head") autoApprove = true;
+      else if (user?.role === "DevOps & Infra Manager") {
+        if (["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(selectedArticle.category)) {
+          autoApprove = true;
+        }
+      } else if (user?.role === "Sec & Comp. Manager") {
+        if (["Security", "Policies & SOPs"].includes(selectedArticle.category)) {
+          autoApprove = true;
+        }
+      }
+
+      const newStatus = autoApprove ? "Published" : "Pending";
+      const newBadge = selectedArticle.badge === "Draft" ? "" : selectedArticle.badge;
+
+      const res = await fetch(`/api/articles/${selectedArticle.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus, badge: newBadge }),
+      });
+      if (!res.ok) throw new Error("Failed to submit");
+      if (refreshArticles) await refreshArticles();
+      selectedArticle.status = newStatus;
+      selectedArticle.badge = newBadge;
+    } catch (e) {
+      console.error(e);
+      alert("Failed to submit article");
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const getCanApprove = () => {
+    if (!user?.role) return false;
+    if (selectedArticle.status !== "Pending") return false;
+    if (selectedArticle.author === user.name) return false;
+
+    if (user.role === "IED Head") return true;
+
+    if (user.role === "DevOps & Infra Manager") {
+      const allowedCategories = [
+        "Network",
+        "Cloud & Hybrid",
+        "Databases",
+        "DR/BCP",
+        "Dev Structure",
+        "DevOps",
+        "API Catalog",
+        "Change Mgmt",
+        "Policies & SOPs"
+      ];
+      return allowedCategories.includes(selectedArticle.category);
+    }
+
+    if (user.role === "Sec & Comp. Manager") {
+      const allowedCategories = [
+        "Security",
+        "Policies & SOPs"
+      ];
+      return allowedCategories.includes(selectedArticle.category);
+    }
+
+    return false;
+  };
+
+  const canApprove = getCanApprove();
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-6 transition-colors">
@@ -64,16 +166,36 @@ export const ArticleDetailView = ({
         >
           <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
-        {canApprove && (
-          <button
-            disabled={isApproving}
-            onClick={handleApprove}
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-green-600 hover:bg-green-700 rounded-lg transition-colors shadow-sm disabled:opacity-50`}
-          >
-            <CheckCircle className="w-4 h-4" />
-            {isApproving ? "Approving..." : "Approve & Publish"}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedArticle.status === "Draft" && selectedArticle.author === user?.name && (
+            <button
+              disabled={isApproving}
+              onClick={handleSubmitDraft}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm disabled:opacity-50 ${isDarkMode ? "bg-blue-900/30 text-blue-400 hover:bg-blue-900/50" : "bg-blue-50 text-blue-700 hover:bg-blue-100"}`}
+            >
+              Submit for Review
+            </button>
+          )}
+          {canApprove && (
+            <button
+              disabled={isApproving}
+              onClick={handleApprove}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm disabled:opacity-50 ${isDarkMode ? "bg-green-900/30 text-green-400 hover:bg-green-900/50" : "bg-green-50 text-green-700 hover:bg-green-100"}`}
+            >
+              <CheckCircle className="w-4 h-4" />
+              {isApproving ? "Publishing..." : "Approve & Publish"}
+            </button>
+          )}
+          {(user?.role === "IED Head" || (selectedArticle.status === "Draft" && selectedArticle.author === user?.name)) && (
+            <button
+              disabled={isApproving}
+              onClick={handleDelete}
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all shadow-sm disabled:opacity-50 ${isDarkMode ? "bg-red-900/30 text-red-400 hover:bg-red-900/50" : "bg-red-50 text-red-700 hover:bg-red-100"}`}
+            >
+              Delete{selectedArticle.status === "Draft" ? " Draft" : " Article"}
+            </button>
+          )}
+        </div>
       </div>
 
       {selectedArticle.status === "Pending" && (
@@ -97,7 +219,15 @@ export const ArticleDetailView = ({
             <span
               className={`text-sm flex items-center gap-1.5 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
             >
-              <Clock className="w-4 h-4" /> {selectedArticle.date}
+              <User className="w-4 h-4" /> By {selectedArticle.author}
+            </span>
+            <span
+              className={`text-sm flex items-center gap-1.5 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
+            >
+              <Clock className="w-4 h-4" />{" "}
+              {selectedArticle.createdAt 
+                ? new Date(selectedArticle.createdAt).toLocaleDateString() + " " + new Date(selectedArticle.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+                : selectedArticle.date}
             </span>
             <span
               className={`text-sm flex items-center gap-1.5 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}

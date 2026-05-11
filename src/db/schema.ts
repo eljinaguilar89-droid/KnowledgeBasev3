@@ -5,8 +5,18 @@ export const users = pgTable("users", {
   email: text("email").notNull().unique(),
   password: text("password").notNull(),
   name: text("name").notNull(),
-  role: text("role").default("Viewer").notNull(),
+  role: text("role").default("NEO").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const categories = pgTable("categories", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  filterCategory: text("filter_category").notNull(),
+  icon: text("icon").notNull(),
+  count: text("count"),
+  colorClass: text("color_class").notNull(),
+  group: text("group").notNull(),
 });
 
 export const articles = pgTable("articles", {
@@ -20,7 +30,6 @@ export const articles = pgTable("articles", {
   category: text("category").notNull(),
   categoryColor: text("category_color").notNull(),
   categoryIcon: text("category_icon"),
-  version: text("version"),
   badge: text("badge"),
   status: text("status").notNull(),
   accessLevel: text("access_level").default("Public").notNull(), // Public, Internal, Confidential, Restricted

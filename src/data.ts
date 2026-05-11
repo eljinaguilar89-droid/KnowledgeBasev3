@@ -2,7 +2,6 @@ export const mockArticles = [
   {
     id: "1",
     title: "Core Banking Network Topology",
-    version: "v3.2",
     badge: "",
     excerpt:
       "VLAN segmentation, firewall zones, and redundant link configuration for production banking networks.",
@@ -19,7 +18,6 @@ export const mockArticles = [
   {
     id: "2",
     title: "Incident Response Runbook — P1/P2",
-    version: "",
     badge: "Critical",
     excerpt:
       "Step-by-step escalation matrix, war room setup, comms templates, and regulatory notification timelines.",
@@ -36,7 +34,6 @@ export const mockArticles = [
   {
     id: "3",
     title: "DR Failover SOP — Core Banking System",
-    version: "v2.0",
     badge: "",
     excerpt:
       "RTO/RPO targets, failover triggers, validation checklist, and BSP notification requirements.",
@@ -53,13 +50,12 @@ export const mockArticles = [
   {
     id: "4",
     title: "API Gateway — Auth & Rate Limiting Policy",
-    version: "v1.4",
     badge: "",
     excerpt:
       "OAuth 2.0 flow, token expiry settings, rate limit tiers, and PCI DSS compliance mapping.",
     content:
       "API Gateway policies:\n- Rate limit: 1000 req/min for internal, 100 req/min for external.\n- Auth: OAuth 2.0 with JWT.",
-    category: "Engineering",
+    category: "Dev Structure",
     categoryColor: "bg-indigo-100 text-indigo-800",
     categoryIcon: "Blocks",
     author: "JD",
@@ -70,7 +66,6 @@ export const mockArticles = [
   {
     id: "5",
     title: "Multi-Region Azure Deployment Guide",
-    version: "v1.1",
     badge: "",
     excerpt:
       "Best practices for deploying cloud resources across secondary regions using Terraform.",
@@ -87,7 +82,6 @@ export const mockArticles = [
   {
     id: "6",
     title: "PostgreSQL HA Cluster Configuration",
-    version: "v4.0",
     badge: "Update",
     excerpt:
       "Patroni and etcd configuration for highly available PostgreSQL 15 database clusters.",
@@ -104,13 +98,12 @@ export const mockArticles = [
   {
     id: "7",
     title: "GitLab CI/CD Golden Pipelines",
-    version: "v2.1",
     badge: "",
     excerpt:
       "Standardized pipeline templates for automated scanning, testing, and container deployment.",
     content:
       "Every project must inherit these gold standard CI pipelines to satisfy DevSecOps requirements.",
-    category: "CI/CD & DevOps",
+    category: "DevOps",
     categoryColor: "bg-purple-100 text-purple-800",
     categoryIcon: "GitBranch",
     author: "JD",
@@ -121,7 +114,6 @@ export const mockArticles = [
   {
     id: "8",
     title: "Enterprise Microservices API Catalog",
-    version: "",
     badge: "Draft",
     excerpt: "Directory of all active internal REST and gRPC endpoints.",
     content:
@@ -137,7 +129,6 @@ export const mockArticles = [
   {
     id: "9",
     title: "Emergency Change Advisory Board (eCAB)",
-    version: "v1.0",
     badge: "",
     excerpt:
       "Expedited process for implementing emergency fixes outside the standard release window.",
@@ -154,7 +145,6 @@ export const mockArticles = [
   {
     id: "10",
     title: "Information Security Policy 2026",
-    version: "v5.0",
     badge: "Required",
     excerpt:
       "Annual mandatory reading for all IT staff. Covers data classification and acceptable use.",
@@ -173,51 +163,93 @@ export const mockArticles = [
 export const mockCategories = [
   {
     id: "cat-1",
-    title: "Network & Infrastructure",
+    title: "Network",
     filterCategory: "Network",
     icon: "Server",
     count: "84 articles · 12 pending",
     colorClass: "bg-blue-100 text-blue-700",
+    group: "Infrastructure"
   },
   {
     id: "cat-2",
-    title: "Security & Compliance",
+    title: "Cloud & Hybrid",
+    filterCategory: "Cloud & Hybrid",
+    icon: "Cloud",
+    count: "30 articles · 2 pending",
+    colorClass: "bg-sky-100 text-sky-700",
+    group: "Infrastructure"
+  },
+  {
+    id: "cat-3",
+    title: "Databases",
+    filterCategory: "Databases",
+    icon: "Database",
+    count: "45 articles · 5 pending",
+    colorClass: "bg-purple-100 text-purple-700",
+    group: "Infrastructure"
+  },
+  {
+    id: "cat-4",
+    title: "Security",
     filterCategory: "Security",
     icon: "ShieldCheck",
     count: "71 articles · 3 pending",
     colorClass: "bg-green-100 text-green-700",
+    group: "Infrastructure"
   },
   {
-    id: "cat-3",
-    title: "Engineering Standards",
-    filterCategory: "Engineering",
-    icon: "Code",
-    count: "58 articles · 1 pending",
-    colorClass: "bg-indigo-100 text-indigo-700",
-  },
-  {
-    id: "cat-4",
-    title: "DR & Business Continuity",
+    id: "cat-5",
+    title: "DR/BCP",
     filterCategory: "DR/BCP",
     icon: "Activity",
     count: "42 articles · 2 pending",
     colorClass: "bg-amber-100 text-amber-700",
+    group: "Infrastructure"
   },
   {
-    id: "cat-5",
-    title: "API & Integration Catalog",
+    id: "cat-6",
+    title: "Dev Structure",
+    filterCategory: "Dev Structure",
+    icon: "Code",
+    count: "58 articles · 1 pending",
+    colorClass: "bg-indigo-100 text-indigo-700",
+    group: "Engineering"
+  },
+  {
+    id: "cat-7",
+    title: "DevOps",
+    filterCategory: "DevOps",
+    icon: "Settings",
+    count: "35 articles · 4 pending",
+    colorClass: "bg-pink-100 text-pink-700",
+    group: "Engineering"
+  },
+  {
+    id: "cat-8",
+    title: "API Catalog",
     filterCategory: "API Catalog",
     icon: "Blocks",
     count: "37 articles · 0 pending",
     colorClass: "bg-teal-100 text-teal-700",
+    group: "Engineering"
   },
   {
-    id: "cat-6",
-    title: "SOPs & Policies",
+    id: "cat-9",
+    title: "Change Mgmt",
+    filterCategory: "Change Mgmt",
+    icon: "GitMerge",
+    count: "22 articles · 2 pending",
+    colorClass: "bg-orange-100 text-orange-700",
+    group: "Engineering"
+  },
+  {
+    id: "cat-10",
+    title: "Policies & SOPs",
     filterCategory: "Policies & SOPs",
     icon: "ListChecks",
     count: "20 articles · 0 pending",
     colorClass: "bg-rose-100 text-rose-700",
+    group: "Governance"
   },
 ];
 

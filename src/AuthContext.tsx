@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-type Role = "Viewer" | "Author" | "Approver" | "Admin";
+type Role =
+  | "NEO"
+  | "DevOps Engineer"
+  | "DevOps & Infra Manager"
+  | "Sec & Comp. Manager"
+  | "IED Head";
 
 type User = {
   id: string;

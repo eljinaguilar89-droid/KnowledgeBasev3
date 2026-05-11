@@ -4,8 +4,8 @@ import path from "path";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import { db } from "./src/db/index.js";
-import { articles, users } from "./src/db/schema.js";
-import { mockArticles } from "./src/data.js";
+import { articles, users, categories } from "./src/db/schema.js";
+import { mockArticles, mockCategories } from "./src/data.js";
 import { desc, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 
@@ -19,11 +19,49 @@ async function startServer() {
   app.use(express.json());
 
   // API Routes
+  let inMemoryArticles = [...mockArticles];
+
+  let inMemoryCategories = [...mockCategories];
+
+  app.get("/api/categories", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        return res.json(inMemoryCategories);
+      }
+      
+      let allCategories = await db.select().from(categories);
+      if (allCategories.length === 0) {
+        allCategories = await db.insert(categories).values(mockCategories).returning();
+      }
+      
+      res.json(allCategories);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/categories", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        const newCat = { ...req.body, id: Date.now().toString() };
+        inMemoryCategories.push(newCat);
+        return res.status(201).json(newCat);
+      }
+      const newCat = await db.insert(categories).values(req.body).returning();
+      res.status(201).json(newCat[0]);
+    } catch (error) {
+      console.error("Error creating category:", error);
+      res.status(500).json({ error: "Failed to create category" });
+    }
+  });
+
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok" });
   });
 
   app.post("/api/auth/signup", async (req, res) => {
+
     try {
       const { email, password, name, role } = req.body;
       if (!email || !password || !name) {
@@ -36,7 +74,7 @@ async function startServer() {
       const hashedPassword = await bcrypt.hash(password, 10);
       const id = Date.now().toString();
       const newUser = await db.insert(users).values({
-        id, email, name, role: role || "Viewer", password: hashedPassword
+        id, email, name, role: role || "NEO", password: hashedPassword
       }).returning({ id: users.id, email: users.email, name: users.name, role: users.role });
       res.status(201).json(newUser[0]);
     } catch (error) {
@@ -91,18 +129,27 @@ async function startServer() {
     }
   });
 
+  app.delete("/api/users/:id", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) return res.json({ success: true });
+      await db.delete(users).where(eq(users.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
   app.get("/api/articles", async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
-        console.warn("WARNING: DATABASE_URL is not set. Returning mock data.");
-        return res.json(mockArticles);
+        return res.json(inMemoryArticles);
       }
       
       let allArticles = await db.select().from(articles).orderBy(desc(articles.createdAt));
       
       // Seed database if empty
       if (allArticles.length === 0) {
-        console.log("Seeding database with mock articles...");
         allArticles = await db.insert(articles).values(mockArticles).returning();
       }
       
@@ -116,8 +163,9 @@ async function startServer() {
   app.post("/api/articles", async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
-        console.warn("WARNING: DATABASE_URL is not set. Mock creation successful.");
-        return res.status(201).json({ ...req.body, id: Date.now().toString() });
+        const newArt = { ...req.body, id: Date.now().toString() };
+        inMemoryArticles.unshift(newArt);
+        return res.status(201).json(newArt);
       }
       const newArticle = await db.insert(articles).values(req.body).returning();
       res.status(201).json(newArticle[0]);
@@ -130,7 +178,12 @@ async function startServer() {
   app.put("/api/articles/:id", async (req, res) => {
     try {
       if (!process.env.DATABASE_URL) {
-        return res.json({ ...req.body, id: req.params.id });
+        const ix = inMemoryArticles.findIndex(a => a.id === req.params.id);
+        if (ix !== -1) {
+          inMemoryArticles[ix] = { ...inMemoryArticles[ix], ...req.body, id: req.params.id };
+          return res.json(inMemoryArticles[ix]);
+        }
+        return res.status(404).json({ error: "Not found" });
       }
       const updated = await db.update(articles)
         .set(req.body)
@@ -141,6 +194,20 @@ async function startServer() {
     } catch (error) {
       console.error("Error updating article:", error);
       res.status(500).json({ error: "Failed to update article" });
+    }
+  });
+
+  app.delete("/api/articles/:id", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        inMemoryArticles = inMemoryArticles.filter(a => a.id !== req.params.id);
+        return res.json({ success: true });
+      }
+      await db.delete(articles).where(eq(articles.id, req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting article:", error);
+      res.status(500).json({ error: "Failed to delete article" });
     }
   });
 

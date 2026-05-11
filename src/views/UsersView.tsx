@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Shield, UserCog } from "lucide-react";
+import { Shield, UserCog, Trash2 } from "lucide-react";
 
 export const UsersView = ({ isDarkMode }: { isDarkMode?: boolean }) => {
   const [users, setUsers] = useState<any[]>([]);
@@ -26,6 +26,23 @@ export const UsersView = ({ isDarkMode }: { isDarkMode?: boolean }) => {
     } catch (e) {
       console.error(e);
       alert("Failed to update role");
+    }
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    try {
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        setUsers(users.filter(u => u.id !== userId));
+      } else {
+        alert("Failed to delete user");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Failed to delete user");
     }
   };
 
@@ -58,25 +75,33 @@ export const UsersView = ({ isDarkMode }: { isDarkMode?: boolean }) => {
                 <td className="p-4">{user.email}</td>
                 <td className="p-4">
                   <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium ${
-                    user.role === 'Admin' ? (isDarkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-700') :
-                    user.role === 'Approver' ? (isDarkMode ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-100 text-amber-800') :
-                    user.role === 'Author' ? (isDarkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700') :
+                    user.role === 'IED Head' ? (isDarkMode ? 'bg-purple-900/30 text-purple-400' : 'bg-purple-100 text-purple-700') :
+                    user.role === 'DevOps & Infra Manager' || user.role === 'Sec & Comp. Manager' ? (isDarkMode ? 'bg-amber-900/30 text-amber-400' : 'bg-amber-100 text-amber-800') :
+                    user.role === 'DevOps Engineer' ? (isDarkMode ? 'bg-blue-900/30 text-blue-400' : 'bg-blue-100 text-blue-700') :
                     (isDarkMode ? 'bg-slate-800 text-slate-400' : 'bg-slate-100 text-slate-600')
                   }`}>
                     {user.role}
                   </span>
                 </td>
-                <td className="p-4">
+                <td className="p-4 flex items-center gap-2">
                   <select 
                     value={user.role}
                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
-                    className={`w-full max-w-[160px] px-3 py-1.5 text-sm rounded-lg outline-none transition-colors border ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-300' : 'bg-white border-slate-300 text-slate-700'}`}
+                    className={`w-full max-w-[200px] px-3 py-1.5 text-sm rounded-lg outline-none transition-colors border ${isDarkMode ? 'bg-slate-900 border-slate-700 text-slate-300' : 'bg-white border-slate-300 text-slate-700'}`}
                   >
-                    <option value="Viewer">Viewer</option>
-                    <option value="Author">Author</option>
-                    <option value="Approver">Approver</option>
-                    <option value="Admin">Admin</option>
+                    <option value="NEO">NEO - Viewer</option>
+                    <option value="DevOps Engineer">DevOps Engineer</option>
+                    <option value="Sec & Comp. Manager">Sec & Comp. Manager</option>
+                    <option value="DevOps & Infra Manager">DevOps & Infra Manager</option>
+                    <option value="IED Head">IED Head</option>
                   </select>
+                  <button
+                    onClick={() => handleDeleteUser(user.id)}
+                    className={`p-1.5 rounded-md hover:bg-red-100 hover:text-red-600 text-slate-400 transition-colors ${isDarkMode ? 'hover:bg-red-900/30 text-slate-500 hover:text-red-400' : ''}`}
+                    title="Delete User"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </td>
               </tr>
             ))}

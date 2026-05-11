@@ -1,5 +1,5 @@
 import React from "react";
-import { Clock, Eye } from "lucide-react";
+import { Clock, Eye, User } from "lucide-react";
 
 export const Badge = ({
   children,
@@ -21,18 +21,23 @@ export const IconButton = ({
   className = "",
   onClick,
   isDarkMode,
+  hasNotifs,
 }: {
   icon: any;
   children?: React.ReactNode;
   className?: string;
   onClick?: () => void;
   isDarkMode?: boolean;
+  hasNotifs?: boolean;
 }) => (
   <button
     onClick={onClick}
-    className={`flex items-center gap-2 p-1.5 rounded-md transition-colors ${isDarkMode ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"} ${className}`}
+    className={`flex items-center gap-2 p-1.5 rounded-md transition-colors relative ${isDarkMode ? "hover:bg-slate-800 text-slate-400" : "hover:bg-slate-100 text-slate-500"} ${className}`}
   >
     <Icon className="w-4 h-4" />
+    {hasNotifs && (
+      <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
+    )}
     {children && <span className="text-sm font-medium">{children}</span>}
   </button>
 );
@@ -71,13 +76,6 @@ export const ArticleCard = ({ article, onClick, isDarkMode }: any) => (
         >
           {article.title}
         </h4>
-        {article.version && (
-          <span
-            className={`text-[10px] px-1.5 py-0.5 rounded flex-shrink-0 font-medium ${isDarkMode ? "bg-green-900/30 text-green-400" : "bg-green-100 text-green-700"}`}
-          >
-            {article.version}
-          </span>
-        )}
         {article.badge && (
           <Badge
             colorClass={
@@ -109,10 +107,10 @@ export const ArticleCard = ({ article, onClick, isDarkMode }: any) => (
       >
         {article.category}
       </Badge>
-      <span className="flex items-center gap-1">
-        <Clock className="w-3.5 h-3.5" /> {article.date}
+      <span className="flex items-center gap-1 min-w-0" title={article.author}>
+        <User className="w-3.5 h-3.5 shrink-0" /> <span className="truncate">{article.author}</span>
       </span>
-      <span className="flex items-center gap-1">
+      <span className="flex items-center gap-1 shrink-0">
         <Eye className="w-3.5 h-3.5" /> {article.views}
       </span>
     </div>

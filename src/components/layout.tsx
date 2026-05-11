@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Bell,
   Settings,
@@ -35,8 +35,21 @@ export const Topbar = ({
   setShowNotifs,
   setShowSettings,
   isDarkMode,
+  hasNotifs,
 }: any) => {
   const { user, logout } = useAuth();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   return (
     <header
@@ -79,7 +92,7 @@ export const Topbar = ({
             className={`w-64 pl-9 pr-4 py-1.5 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all shadow-sm ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-200 placeholder:text-slate-500" : "bg-slate-50 border-slate-200 text-slate-800 placeholder:text-slate-400"}`}
           />
         </form>
-        {user?.role === "Author" && (
+        {user?.role !== "NEO" && (
           <button
             onClick={() => handleNavigate("editor")}
             className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium border rounded-md transition-colors ${isDarkMode ? "text-slate-300 border-slate-700 hover:bg-slate-800" : "text-slate-600 border-slate-200 hover:bg-slate-50"}`}
@@ -91,22 +104,40 @@ export const Topbar = ({
           icon={Bell}
           onClick={() => setShowNotifs(true)}
           isDarkMode={isDarkMode}
+          hasNotifs={hasNotifs}
         />
         <IconButton
           icon={Settings}
           onClick={() => setShowSettings(true)}
           isDarkMode={isDarkMode}
         />
-        <IconButton
-          icon={LogOut}
-          onClick={() => logout()}
-          isDarkMode={isDarkMode}
-        />
-        <div
-          className={`w-8 h-8 rounded-full font-semibold text-xs flex items-center justify-center ml-2 border transition-colors ${isDarkMode ? "bg-blue-900/40 text-blue-400 border-blue-900/50" : "bg-blue-50 text-blue-700 border-blue-100"}`}
-          title={user?.name}
-        >
-          {user?.name.substring(0, 2).toUpperCase()}
+        <div className="relative" ref={profileMenuRef}>
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className={`w-8 h-8 rounded-full font-semibold text-xs flex items-center justify-center ml-2 border transition-colors ${isDarkMode ? "bg-blue-900/40 text-blue-400 border-blue-900/50 hover:bg-blue-900/60" : "bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-100"}`}
+            title={user?.name}
+          >
+            {user?.name.substring(0, 2).toUpperCase()}
+          </button>
+          
+          {showProfileMenu && (
+            <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg py-1 ring-1 ring-black ring-opacity-5 z-50 ${isDarkMode ? "bg-slate-800" : "bg-white"}`}>
+              <div className={`px-4 py-2 border-b ${isDarkMode ? "border-slate-700" : "border-slate-200"}`}>
+                <p className={`text-sm font-medium ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}>{user?.name}</p>
+                <p className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>{user?.role}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  logout();
+                }}
+                className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors ${isDarkMode ? "text-slate-300 hover:bg-slate-700 text-red-400 hover:text-red-300" : "text-slate-700 hover:bg-slate-100 text-red-600 hover:text-red-700"}`}
+              >
+                <LogOut className="w-4 h-4" />
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
@@ -274,16 +305,16 @@ export const Sidebar = (props: any) => {
         <SidebarSection title="Engineering" isDarkMode={props.isDarkMode}>
           <SidebarItem
             icon={Code}
-            label="Dev Standards"
+            label="Dev Structure"
             view="browse"
-            categoryTarget="Engineering"
+            categoryTarget="Dev Structure"
             {...itemProps}
           />
           <SidebarItem
             icon={GitBranch}
-            label="CI/CD & DevOps"
+            label="DevOps"
             view="browse"
-            categoryTarget="CI/CD & DevOps"
+            categoryTarget="DevOps"
             {...itemProps}
           />
           <SidebarItem
@@ -310,13 +341,15 @@ export const Sidebar = (props: any) => {
             categoryTarget="Policies & SOPs"
             {...itemProps}
           />
-          <SidebarItem
-            icon={ClipboardSignature}
-            label="Audit Logs"
-            view="audit"
-            {...itemProps}
-          />
-          {user?.role === "Admin" && (
+          {user?.role && ["IED Head", "DevOps & Infra Manager", "Sec & Comp. Manager"].includes(user.role) && (
+            <SidebarItem
+              icon={ClipboardSignature}
+              label="Audit Logs"
+              view="audit"
+              {...itemProps}
+            />
+          )}
+          {user?.role === "IED Head" && (
             <SidebarItem
               icon={UserCog}
               label="User Management"
@@ -340,8 +373,41 @@ export const RightPanel = ({
   handleNavigate,
   setActiveTab,
   isDarkMode,
+  articles = [],
 }: any) => {
   const { user } = useAuth();
+  
+  const userArticles = articles.filter((a: any) => a.author === user?.name);
+  const authoredCount = userArticles.filter((a: any) => a.status === "Published").length;
+  const pendingCount = userArticles.filter((a: any) => a.status === "Pending").length;
+  const draftCount = userArticles.filter((a: any) => a.status === "Draft").length;
+
+  // Generate recent activity from articles
+  const recentActivity = [...articles]
+    .sort((a, b) => new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime())
+    .slice(0, 4)
+    .map((a, i) => {
+      let actionStr = "published a new article";
+      if (a.status === "Pending") actionStr = "submitted an article for review";
+      if (a.status === "Draft") actionStr = "saved a draft";
+      
+      const colors = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500"];
+      return {
+        id: a.id,
+        text: `${Math.random() > 0.5 && a.author !== user?.name ? a.author : "You"} ${actionStr}: ${a.title}`,
+        time: a.date || "Just now",
+        color: colors[i % colors.length]
+      };
+    });
+
+  if (recentActivity.length === 0) {
+    recentActivity.push({
+      id: "none",
+      text: "No recent activity",
+      time: "",
+      color: "bg-slate-400"
+    });
+  }
 
   return (
     <aside
@@ -354,13 +420,13 @@ export const RightPanel = ({
           Recent Activity
         </h3>
         <div className="space-y-4">
-          {mockActivities.map((item, i) => (
+          {recentActivity.map((item, i) => (
             <div key={item.id} className="flex gap-3">
               <div className="mt-1.5 relative flex justify-center">
                 <div
                   className={`w-2 h-2 rounded-full ${item.color} z-10`}
                 ></div>
-                {i !== mockActivities.length - 1 && (
+                {i !== recentActivity.length - 1 && (
                   <div
                     className={`absolute top-2 w-px h-full ${isDarkMode ? "bg-slate-800" : "bg-slate-200"}`}
                   ></div>
@@ -382,7 +448,7 @@ export const RightPanel = ({
           ))}
         </div>
 
-        {user?.role && ["Author", "Approver", "Admin"].includes(user.role) && (
+        {user?.role && user.role !== "NEO" && (
           <>
             <h3
               className={`text-[10px] font-bold uppercase tracking-[0.1em] mt-8 mb-3 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
@@ -402,16 +468,20 @@ export const RightPanel = ({
               <button
                 onClick={() => {
                   handleNavigate("dashboard");
-                  setActiveTab("Pending Review");
+                  if (user.role === "DevOps Engineer") {
+                    setActiveTab("My Pending Reviews");
+                  } else {
+                    setActiveTab("To Review & Publish");
+                  }
                 }}
                 className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-800 hover:text-slate-200" : "text-slate-600 hover:bg-slate-200 hover:text-slate-900"}`}
               >
                 <div className="flex items-center gap-3">
                   <FileSearch className="w-4 h-4 text-slate-500" />
-                  <span>Request review</span>
+                  <span>{user.role === "DevOps Engineer" ? "My Pending Reviews" : "Review Articles"}</span>
                 </div>
               </button>
-              {user.role === "Admin" && (
+              {["IED Head", "DevOps & Infra Manager", "Sec & Comp. Manager"].includes(user.role) && (
                 <button
                   onClick={() => handleNavigate("audit")}
                   className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-800 hover:text-slate-200" : "text-slate-600 hover:bg-slate-200 hover:text-slate-900"}`}
@@ -422,7 +492,7 @@ export const RightPanel = ({
                   </div>
                 </button>
               )}
-              {user.role === "Admin" && (
+              {user.role === "IED Head" && (
                 <button
                   onClick={() => handleNavigate("users")}
                   className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-800 hover:text-slate-200" : "text-slate-600 hover:bg-slate-200 hover:text-slate-900"}`}
@@ -453,7 +523,7 @@ export const RightPanel = ({
                   <span
                     className={`font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}
                   >
-                    0
+                    {authoredCount}
                   </span>
                 </div>
                 <div
@@ -463,7 +533,7 @@ export const RightPanel = ({
                   <span
                     className={`font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}
                   >
-                    0
+                    {pendingCount}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-1">
@@ -471,7 +541,7 @@ export const RightPanel = ({
                   <span
                     className={`font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}
                   >
-                    0
+                    {draftCount}
                   </span>
                 </div>
               </div>

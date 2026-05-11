@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { Filter } from "lucide-react";
 import { ArticleCard } from "../components/ui";
 
@@ -12,21 +12,57 @@ export const BrowseView = ({
   handleNavigate,
   isDarkMode,
 }: any) => {
-  const totalPages = Math.ceil(filteredArticles.length / ITEMS_PER_PAGE);
-  const paginatedArticles = filteredArticles.slice(
+  const [showFilters, setShowFilters] = useState(false);
+  const [sortOrder, setSortOrder] = useState("latest");
+  const [dateFilter, setDateFilter] = useState("all");
+
+  let processedArticles = [...filteredArticles];
+
+  // Apply Date Filter
+  if (dateFilter !== "all") {
+    const now = new Date();
+    processedArticles = processedArticles.filter((a: any) => {
+      if (!a.createdAt) return true; // keep articles without date if any
+      const articleDate = new Date(a.createdAt);
+      if (dateFilter === "today") {
+        return articleDate.toDateString() === now.toDateString();
+      } else if (dateFilter === "week") {
+        const diff = now.getTime() - articleDate.getTime();
+        return diff <= 7 * 24 * 60 * 60 * 1000;
+      } else if (dateFilter === "month") {
+        return articleDate.getMonth() === now.getMonth() && articleDate.getFullYear() === now.getFullYear();
+      }
+      return true;
+    });
+  }
+
+  // Apply Sort
+  processedArticles.sort((a: any, b: any) => {
+    if (sortOrder === "latest") {
+      return new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime();
+    } else if (sortOrder === "oldest") {
+      return new Date(a.createdAt || Date.now()).getTime() - new Date(b.createdAt || Date.now()).getTime();
+    } else if (sortOrder === "views") {
+      return (b.views || 0) - (a.views || 0);
+    }
+    return 0;
+  });
+
+  const totalPages = Math.ceil(processedArticles.length / ITEMS_PER_PAGE);
+  const paginatedArticles = processedArticles.slice(
     (browsePage - 1) * ITEMS_PER_PAGE,
     browsePage * ITEMS_PER_PAGE,
   );
 
   return (
     <div className="max-w-5xl mx-auto p-6 lg:p-8 transition-colors">
-      <h2
-        className={`text-2xl font-serif mb-6 ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}
-      >
-        Browse Knowledge Base
-      </h2>
-      <div className="flex flex-col sm:flex-row gap-3 mb-8 justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+        <h2
+          className={`text-2xl font-serif ${isDarkMode ? "text-slate-100" : "text-slate-800"}`}
+        >
+          Browse Knowledge Base
+        </h2>
+        <div className="flex items-center gap-3 relative">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
@@ -41,8 +77,8 @@ export const BrowseView = ({
               <option>DR/BCP</option>
             </optgroup>
             <optgroup label="Engineering">
-              <option>Engineering</option>
-              <option>CI/CD & DevOps</option>
+              <option>Dev Structure</option>
+              <option>DevOps</option>
               <option>API Catalog</option>
               <option>Change Mgmt</option>
             </optgroup>
@@ -51,10 +87,41 @@ export const BrowseView = ({
             </optgroup>
           </select>
           <button
-            className={`flex items-center justify-center p-2 border rounded-lg shadow-sm transition-colors ${isDarkMode ? "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200" : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center justify-center p-2 border rounded-lg shadow-sm transition-colors ${isDarkMode ? "bg-slate-900 border-slate-800 text-slate-400 hover:bg-slate-800 hover:text-slate-200" : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"} ${showFilters ? 'bg-slate-100' : ''}`}
           >
             <Filter className="w-5 h-5" />
           </button>
+          
+          {showFilters && (
+            <div className={`absolute top-full right-0 mt-2 p-4 border rounded-xl shadow-xl w-64 z-10 flex flex-col gap-4 ${isDarkMode ? "bg-slate-800 border-slate-700" : "bg-white border-slate-200"}`}>
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Sort By</label>
+                <select 
+                  value={sortOrder} 
+                  onChange={(e) => setSortOrder(e.target.value)}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg outline-none ${isDarkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-200 text-slate-700"}`}
+                >
+                  <option value="latest">Latest First</option>
+                  <option value="oldest">Oldest First</option>
+                  <option value="views">Most Viewed</option>
+                </select>
+              </div>
+              <div>
+                <label className={`block text-xs font-semibold mb-1.5 ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>Upload Date</label>
+                <select 
+                  value={dateFilter} 
+                  onChange={(e) => setDateFilter(e.target.value)}
+                  className={`w-full px-3 py-2 text-sm border rounded-lg outline-none ${isDarkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-200 text-slate-700"}`}
+                >
+                  <option value="all">Any time</option>
+                  <option value="today">Today</option>
+                  <option value="week">Past 7 days</option>
+                  <option value="month">This Month</option>
+                </select>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

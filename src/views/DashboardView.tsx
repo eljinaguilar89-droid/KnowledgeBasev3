@@ -11,29 +11,91 @@ import {
   History,
 } from "lucide-react";
 import { StatCard, ArticleCard, Badge } from "../components/ui";
-import { mockCategories, mockCompliance } from "../data";
+import { mockCompliance } from "../data";
 import { useAuth } from "../AuthContext";
 
 export const DashboardView = ({
   activeTab,
   setActiveTab,
   tabArticles,
+  allArticles = [],
   handleNavigate,
   setSelectedCategory,
   isDarkMode,
+  categories = [],
 }: any) => {
   const { user } = useAuth();
+  
+  const totalArticles = allArticles.length;
+  const recentArticles = allArticles.filter((a: any) => {
+    if (a.createdAt) {
+      const date = new Date(a.createdAt);
+      const now = new Date();
+      return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+    } else if (a.date) {
+      const str = a.date.toLowerCase();
+      if (str.match(/^[1-9]\s*m\s*ago/) || str.includes("y ago")) return false; 
+      return true;
+    }
+    return false;
+  }).length;
+  
+  const pendingForUser = allArticles.filter((a: any) => {
+    if (a.status !== "Pending" || a.author === user?.name) return false;
+    if (user?.role === "IED Head") return true;
+    if (user?.role === "DevOps & Infra Manager") return ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
+    if (user?.role === "Sec & Comp. Manager") return ["Security", "Policies & SOPs"].includes(a.category);
+    return false;
+  }).length;
+
+  const overdueCount = allArticles.filter((a: any) => {
+    if (a.status !== "Pending" || a.author === user?.name) return false;
+    
+    let isForUser = false;
+    if (user?.role === "IED Head") isForUser = true;
+    else if (user?.role === "DevOps & Infra Manager") isForUser = ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
+    else if (user?.role === "Sec & Comp. Manager") isForUser = ["Security", "Policies & SOPs"].includes(a.category);
+
+    if (!isForUser) return false;
+
+    let diffDays = 0;
+    if (a.createdAt) {
+      const date = new Date(a.createdAt);
+      const now = new Date();
+      const diffTime = Math.abs(now.getTime() - date.getTime());
+      diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    } else if (a.date) {
+        const str = a.date.toLowerCase();
+        if (str.includes("d ago")) {
+            const num = parseInt(str);
+            if (!isNaN(num)) diffDays = num;
+        } else if (str.includes("w ago")) {
+            const num = parseInt(str);
+            if (!isNaN(num)) diffDays = num * 7;
+        } else if (str.includes("m ago") || str.includes("mo ") || str.includes("y ago")) {
+            diffDays = 30; // definitely overdue
+        }
+    }
+    return diffDays > 7;
+  }).length;
+
+  const uniqueAuthors = new Set(allArticles.map((a: any) => a.author));
+  const uniqueContributors = uniqueAuthors.size;
+  // let's assume each user is roughly a separate team or we can extract some logic. The user said "Across 4 teams also reflect number of contrinbutors", so we can just use 4 teams but adjust wording... wait!
+  // I will just keep it static for the subtext "Across 4 teams" or make it dynamic if we have a teams list.
+  // Actually, we can count unique categories they contribute to as "teams".
+  const uniqueTeams = new Set(allArticles.map((a: any) => a.category)).size;
 
   let tabsToMap = ["Overview"];
-  if (user?.role === "Author") {
-    tabsToMap = ["Overview", "My Articles", "Pending Review"];
-  } else if (user?.role === "Approver") {
-    tabsToMap = ["Overview", "My Articles", "Pending Review"];
-  } else if (user?.role === "Admin") {
+  if (user?.role === "DevOps Engineer") {
+    tabsToMap = ["Overview", "My Articles", "My Pending Reviews"];
+  } else if (user?.role === "DevOps & Infra Manager" || user?.role === "Sec & Comp. Manager") {
+    tabsToMap = ["Overview", "My Articles", "To Review & Publish", "Audit Trail"];
+  } else if (user?.role === "IED Head") {
     tabsToMap = [
       "Overview",
       "My Articles",
-      "Pending Review",
+      "To Review & Publish",
       "Compliance",
       "Audit Trail",
     ];
@@ -42,22 +104,25 @@ export const DashboardView = ({
   return (
     <div className="max-w-5xl mx-auto p-6 lg:p-8 transition-colors">
       {/* Alert Bar */}
-      <div
-        className={`flex items-center gap-3 border px-4 py-3 rounded-lg mb-6 shadow-sm transition-colors ${isDarkMode ? "bg-blue-900/20 border-blue-800 text-blue-300" : "bg-blue-50 border-blue-200 text-blue-800"}`}
-      >
-        <Info
-          className={`w-5 h-5 flex-shrink-0 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}
-        />
-        <p className="text-sm">
-          <span className="font-semibold">Action Required:</span> 3 articles due
-          for BSP compliance review this quarter.
-          <button
-            className={`ml-2 font-semibold underline hover:opacity-80 ${isDarkMode ? "decoration-blue-700" : "decoration-blue-300"}`}
-          >
-            Review now
-          </button>
-        </p>
-      </div>
+      {pendingForUser > 0 && (
+        <div
+          className={`flex items-center gap-3 border px-4 py-3 rounded-lg mb-6 shadow-sm transition-colors ${isDarkMode ? "bg-blue-900/20 border-blue-800 text-blue-300" : "bg-blue-50 border-blue-200 text-blue-800"}`}
+        >
+          <Info
+            className={`w-5 h-5 flex-shrink-0 ${isDarkMode ? "text-blue-400" : "text-blue-600"}`}
+          />
+          <p className="text-sm">
+            <span className="font-semibold">Action Required:</span> {pendingForUser} article{pendingForUser > 1 ? "s" : ""} pending
+            for BSP compliance review right now.
+            <button
+              onClick={() => setActiveTab("To Review & Publish")}
+              className={`ml-2 font-semibold underline hover:opacity-80 ${isDarkMode ? "decoration-blue-700" : "decoration-blue-300"}`}
+            >
+              Review now
+            </button>
+          </p>
+        </div>
+      )}
 
       {/* Tabs */}
       <div
@@ -82,7 +147,9 @@ export const DashboardView = ({
 
       {(activeTab === "Overview" ||
         activeTab === "My Articles" ||
-        activeTab === "Pending Review") && (
+        activeTab === "Pending Review" ||
+        activeTab === "My Pending Reviews" ||
+        activeTab === "To Review & Publish") && (
         <>
           {activeTab === "Overview" && (
             <>
@@ -90,14 +157,14 @@ export const DashboardView = ({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
                 <StatCard
                   title="Total Articles"
-                  value="312"
-                  subtext="↑ 14 this month"
+                  value={String(totalArticles || 0)}
+                  subtext={`↑ ${recentArticles} this month`}
                   isDarkMode={isDarkMode}
                 />
                 <StatCard
                   title="Pending Review"
-                  value="18"
-                  subtext="5 overdue"
+                  value={String(pendingForUser || 0)}
+                  subtext={`${overdueCount} overdue`}
                   isDarkMode={isDarkMode}
                 />
                 <StatCard
@@ -108,8 +175,8 @@ export const DashboardView = ({
                 />
                 <StatCard
                   title="Active Contributors"
-                  value="27"
-                  subtext="Across 4 teams"
+                  value={String(uniqueContributors || 0)}
+                  subtext={`Across ${uniqueTeams} teams`}
                   isDarkMode={isDarkMode}
                 />
               </div>
@@ -125,11 +192,11 @@ export const DashboardView = ({
                   <span
                     className={`text-xs font-medium ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
                   >
-                    6 categories
+                    {categories.length} categories
                   </span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {mockCategories.map((cat, idx) => (
+                  {categories.map((cat: any, idx: number) => (
                     <button
                       key={idx}
                       onClick={() => {
