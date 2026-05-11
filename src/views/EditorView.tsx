@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Send,
@@ -11,7 +11,6 @@ import {
   AlignRight,
   List,
   ListOrdered,
-  Image as ImageIcon,
   UploadCloud,
   X,
 } from "lucide-react";
@@ -38,6 +37,47 @@ export const EditorView = ({
   const [accessLevel, setAccessLevel] = useState("Public");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const contentRef = React.useRef<HTMLDivElement>(null);
+  const [pages, setPages] = useState<string[]>([""]);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const previousScrollHeight = React.useRef<number>(0);
+  const [savedRange, setSavedRange] = useState<Range | null>(null);
+
+  const saveSelection = () => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      setSavedRange(sel.getRangeAt(0));
+    }
+  };
+
+  const restoreSelection = () => {
+    const sel = window.getSelection();
+    if (sel && savedRange) {
+      sel.removeAllRanges();
+      sel.addRange(savedRange);
+    }
+  };
+
+  useEffect(() => {
+    if (contentRef.current) {
+      const pageContent = pages[currentPage - 1] || "";
+      let didUpdate = false;
+      if (contentRef.current.innerHTML !== pageContent) {
+        contentRef.current.innerHTML = pageContent;
+        didUpdate = true;
+      }
+      contentRef.current.focus({ preventScroll: true });
+      if (didUpdate) {
+        try {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          range.selectNodeContents(contentRef.current);
+          range.collapse(false);
+          sel?.removeAllRanges();
+          sel?.addRange(range);
+        } catch (e) {}
+      }
+    }
+  }, [currentPage]);
 
   const onDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -61,7 +101,11 @@ export const EditorView = ({
       return;
     }
 
-    const contentStr = contentRef.current?.innerText || "No content provided.";
+    const currentPages = [...pages];
+    if (contentRef.current) {
+      currentPages[currentPage - 1] = contentRef.current.innerHTML;
+    }
+    const contentStr = currentPages.join("<p><!-- PAGE_BREAK --></p>");
     setIsSubmitting(true);
 
     let finalStatus: "Draft" | "Pending" | "Published" = status;
@@ -87,12 +131,34 @@ export const EditorView = ({
       }
     }
 
+    let attachmentNameVal = null;
+    let attachmentDataVal = null;
+
+    if (files.length > 0) {
+      const file = files[0];
+      attachmentNameVal = file.name;
+      
+      try {
+        attachmentDataVal = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+             // result will be a data URL like "data:image/jpeg;base64,..."
+             resolve(reader.result as string);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      } catch (err) {
+        console.error("Failed to read file", err);
+      }
+    }
+
     try {
       const newArticle = {
         id: Math.random().toString(36).substr(2, 9),
         title: title,
         badge: status === "Draft" ? "Draft" : "",
-        excerpt: contentStr.substring(0, 80) + "...",
+        excerpt: (contentRef.current?.innerText || "").substring(0, 80) + "...",
         content: contentStr,
         category: category,
         accessLevel: accessLevel,
@@ -102,6 +168,8 @@ export const EditorView = ({
         status: finalStatus,
         date: "Just now",
         views: 0,
+        attachmentName: attachmentNameVal,
+        attachmentData: attachmentDataVal,
       };
 
       await fetch("/api/articles", {
@@ -231,6 +299,22 @@ export const EditorView = ({
               <div
                 className={`flex items-center gap-1 border-b p-2 flex-wrap transition-colors ${isDarkMode ? "bg-slate-800 border-slate-700" : "bg-slate-100 border-slate-200"}`}
               >
+                <select
+                  onChange={(e) => {
+                     restoreSelection();
+                     execCmd("formatBlock", e.target.value);
+                     saveSelection();
+                  }}
+                  className={`text-sm rounded-md px-2 py-1 outline-none focus:ring-1 focus:ring-blue-500 transition-colors ${isDarkMode ? "bg-slate-700 text-slate-200 border-none hover:bg-slate-600" : "bg-white text-slate-700 border border-slate-300 hover:bg-slate-50"}`}
+                >
+                  <option value="P">Normal text</option>
+                  <option value="H1">Title</option>
+                  <option value="H2">Heading</option>
+                  <option value="H3">Subheading</option>
+                </select>
+
+                <div className={`w-px h-4 mx-1 ${isDarkMode ? "bg-slate-700" : "bg-slate-300"}`}></div>
+
                 <IconButton
                   icon={Bold}
                   onClick={() => execCmd("bold")}
@@ -300,26 +384,110 @@ export const EditorView = ({
                   }
                   isDarkMode={isDarkMode}
                 />
-                <IconButton
-                  icon={ImageIcon}
-                  className={
-                    isDarkMode
-                      ? "hover:bg-slate-700 text-slate-400"
-                      : "hover:bg-slate-200 text-slate-600"
-                  }
-                  isDarkMode={isDarkMode}
-                />
+                <div
+                  className={`w-px h-4 mx-1 ${isDarkMode ? "bg-slate-700" : "bg-slate-300"}`}
+                ></div>
               </div>
 
               {/* Editable Area */}
               <div
                 ref={contentRef}
-                className={`w-full min-h-[350px] p-6 focus:outline-none prose prose-sm max-w-none cursor-text transition-colors ${isDarkMode ? "bg-slate-950 text-slate-300 prose-invert" : "bg-white text-slate-800 prose-slate"}`}
+                className={`w-full max-w-[816px] h-[1248px] overflow-hidden mx-auto p-12 focus:outline-none prose max-w-none cursor-text transition-colors shadow-lg border prose-li:marker:text-slate-800 dark:prose-li:marker:text-slate-200 ${isDarkMode ? "bg-slate-900 text-slate-300 prose-invert border-slate-800" : "bg-white text-slate-800 prose-slate border-slate-200"}`}
                 contentEditable
                 suppressContentEditableWarning
                 placeholder="Write your article content here..."
+                onBlur={saveSelection}
+                onMouseUp={saveSelection}
+                onKeyUp={(e) => {
+                  saveSelection();
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    const el = e.currentTarget;
+                    if (el.scrollHeight > el.clientHeight) {
+                       e.preventDefault();
+                       const newPages = [...pages];
+                       newPages[currentPage - 1] = el.innerHTML;
+                       if (currentPage === newPages.length) {
+                         newPages.push("<p><br></p>");
+                       }
+                       setPages(newPages);
+                       setCurrentPage(currentPage + 1);
+                    }
+                  }
+                }}
+                onInput={(e) => {
+                  const el = e.currentTarget;
+                  const newPages = [...pages];
+                  newPages[currentPage - 1] = el.innerHTML;
+                  setPages(newPages);
+                  
+                  if (el.scrollHeight > el.clientHeight) {
+                     if (currentPage < newPages.length) {
+                       setCurrentPage(currentPage + 1);
+                     } else {
+                       newPages.push("<p><br></p>");
+                       setPages(newPages);
+                       setCurrentPage(newPages.length);
+                     }
+                  }
+                }}
               ></div>
             </div>
+
+            {/* Pagination Controls */}
+            {pages.length > 0 && (
+              <div className="flex justify-center items-center gap-2 mt-8 mb-8">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                      const newPages = [...pages];
+                      if (contentRef.current) newPages[currentPage - 1] = contentRef.current.innerHTML;
+                      setPages(newPages);
+                      setCurrentPage((prev) => Math.max(1, prev - 1));
+                  }}
+                  className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
+                >
+                  Previous
+                </button>
+
+                <div className={`flex items-center gap-2 mx-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+                  <span>Page</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={pages.length}
+                    value={currentPage}
+                    onChange={(e) => {
+                      let val = parseInt(e.target.value);
+                      if (!isNaN(val)) {
+                          const target = Math.min(Math.max(1, val), pages.length);
+                          const newPages = [...pages];
+                          if (contentRef.current) newPages[currentPage - 1] = contentRef.current.innerHTML;
+                          setPages(newPages);
+                          setCurrentPage(target);
+                      }
+                    }}
+                    className={`w-16 px-2 py-1.5 text-center border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors ${isDarkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800"}`}
+                  />
+                  <span>of {pages.length}</span>
+                </div>
+
+                <button
+                  disabled={currentPage === pages.length}
+                  onClick={() => {
+                      const newPages = [...pages];
+                      if (contentRef.current) newPages[currentPage - 1] = contentRef.current.innerHTML;
+                      setPages(newPages);
+                      setCurrentPage((prev) => Math.min(pages.length, prev + 1));
+                  }}
+                  className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+
           </div>
 
           <div>

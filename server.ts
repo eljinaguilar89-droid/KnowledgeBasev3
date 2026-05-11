@@ -16,7 +16,8 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json());
+  app.use(express.json({ limit: '50mb' }));
+  app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
   // API Routes
   let inMemoryArticles = [...mockArticles];
@@ -75,7 +76,7 @@ async function startServer() {
       const id = Date.now().toString();
       const newUser = await db.insert(users).values({
         id, email, name, role: role || "NEO", password: hashedPassword
-      }).returning({ id: users.id, email: users.email, name: users.name, role: users.role });
+      }).returning({ id: users.id, email: users.email, name: users.name, role: users.role, apiKey: users.apiKey });
       res.status(201).json(newUser[0]);
     } catch (error) {
       console.error(error);
@@ -98,7 +99,7 @@ async function startServer() {
       if (!match) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
-      res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+      res.json({ id: user.id, email: user.email, name: user.name, role: user.role, apiKey: user.apiKey });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Server error" });
@@ -137,6 +138,120 @@ async function startServer() {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  app.post("/api/auth/generate-key", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "Missing user id" });
+      const newKey = "ied_" + Math.random().toString(36).substr(2, 10) + Date.now().toString(36);
+      if (process.env.DATABASE_URL) {
+        await db.update(users).set({ apiKey: newKey }).where(eq(users.id, userId));
+      }
+      res.json({ apiKey: newKey });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  // Public API integration endpoints
+  app.use("/api/public/v1", async (req, res, next) => {
+    if (!process.env.DATABASE_URL) {
+      return next();
+    }
+    const apiKey = req.headers["x-api-key"] || req.query.apiKey;
+    if (!apiKey) {
+      return res.status(401).json({ error: "Unauthorized: Missing API Key" });
+    }
+    const userList = await db.select().from(users).where(eq(users.apiKey, String(apiKey)));
+    if (userList.length === 0) {
+      return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
+    }
+    // inject user if needed
+    (req as any).apiUser = userList[0];
+    next();
+  });
+
+  app.get("/api/public/v1/articles", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        return res.json(inMemoryArticles.filter(a => a.status === "Published"));
+      }
+      const data = await db.select().from(articles).where(eq(articles.status, "Published")).orderBy(desc(articles.createdAt));
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch articles" });
+    }
+  });
+
+  app.get("/api/public/v1/categories", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        return res.json(inMemoryCategories);
+      }
+      const data = await db.select().from(categories);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch categories" });
+    }
+  });
+
+  app.post("/api/auth/generate-key", async (req, res) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "Missing user id" });
+      const newKey = "ied_" + Math.random().toString(36).substr(2, 10) + Date.now().toString(36);
+      if (process.env.DATABASE_URL) {
+        await db.update(users).set({ apiKey: newKey }).where(eq(users.id, userId));
+      }
+      res.json({ apiKey: newKey });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Server error" });
+    }
+  });
+
+  // Public API integration endpoints
+  app.use("/api/public/v1", async (req, res, next) => {
+    if (!process.env.DATABASE_URL) {
+      return next();
+    }
+    const apiKey = req.headers["x-api-key"] || req.query.apiKey;
+    if (!apiKey) {
+      return res.status(401).json({ error: "Unauthorized: Missing API Key" });
+    }
+    const userList = await db.select().from(users).where(eq(users.apiKey, String(apiKey)));
+    if (userList.length === 0) {
+      return res.status(401).json({ error: "Unauthorized: Invalid API Key" });
+    }
+    // inject user if needed
+    (req as any).apiUser = userList[0];
+    next();
+  });
+
+  app.get("/api/public/v1/articles", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        return res.json(inMemoryArticles.filter(a => a.status === "Published"));
+      }
+      const data = await db.select().from(articles).where(eq(articles.status, "Published")).orderBy(desc(articles.createdAt));
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch articles" });
+    }
+  });
+
+  app.get("/api/public/v1/categories", async (req, res) => {
+    try {
+      if (!process.env.DATABASE_URL) {
+        return res.json(inMemoryCategories);
+      }
+      const data = await db.select().from(categories);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
 

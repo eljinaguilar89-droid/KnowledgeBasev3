@@ -12,6 +12,7 @@ type User = {
   email: string;
   name: string;
   role: Role;
+  apiKey?: string;
 };
 
 type AuthContextType = {
@@ -26,18 +27,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem("psbank_user");
+    const stored = localStorage.getItem("ied_user");
     return stored ? JSON.parse(stored) : null;
   });
 
   const login = (newUser: User) => {
     setUser(newUser);
-    localStorage.setItem("psbank_user", JSON.stringify(newUser));
+    localStorage.setItem("ied_user", JSON.stringify(newUser));
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem("psbank_user");
+    localStorage.removeItem("ied_user");
   };
 
   return (

@@ -9,6 +9,10 @@ import {
   ListChecks,
   Shield,
   History,
+  Cloud,
+  Database,
+  Settings,
+  GitMerge,
 } from "lucide-react";
 import { StatCard, ArticleCard, Badge } from "../components/ui";
 import { mockCompliance } from "../data";
@@ -222,6 +226,10 @@ export const DashboardView = ({
                         {cat.icon === "ListChecks" && (
                           <ListChecks className="w-5 h-5" />
                         )}
+                        {cat.icon === "Cloud" && <Cloud className="w-5 h-5" />}
+                        {cat.icon === "Database" && <Database className="w-5 h-5" />}
+                        {cat.icon === "Settings" && <Settings className="w-5 h-5" />}
+                        {cat.icon === "GitMerge" && <GitMerge className="w-5 h-5" />}
                       </div>
                       <h4
                         className={`text-sm font-semibold mb-1 group-hover:text-blue-600 transition-colors ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}

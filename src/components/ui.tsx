@@ -76,7 +76,7 @@ export const ArticleCard = ({ article, onClick, isDarkMode }: any) => (
         >
           {article.title}
         </h4>
-        {article.badge && (
+        {article.badge === "Draft" && (
           <Badge
             colorClass={
               isDarkMode

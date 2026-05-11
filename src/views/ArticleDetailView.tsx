@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft, Clock, Eye, CheckCircle, User } from "lucide-react";
+import { ArrowLeft, Clock, Eye, CheckCircle, User, Download } from "lucide-react";
 import { Badge } from "../components/ui";
 import { useAuth } from "../AuthContext";
 
@@ -39,9 +39,10 @@ export const ArticleDetailView = ({
       </div>
     );
 
-  const pages = selectedArticle.content
-    .split(/\n\s*\n/)
-    .filter((p: string) => p.trim() !== "");
+  let pages = selectedArticle.content.split(/<p><!-- PAGE_BREAK --><\/p>|<p>&lt;!-- PAGE_BREAK --&gt;<\/p>|<hr class="page-break"[^>]*>/i);
+  if (pages.length === 1 && !selectedArticle.content.includes("<")) {
+     pages = selectedArticle.content.split(/\n\s*\n/).filter((p: string) => p.trim() !== "");
+  }
   const currentArticlePageContent =
     pages[articlePage - 1] || selectedArticle.content;
   const totalArticlePages = pages.length;
@@ -248,73 +249,95 @@ export const ArticleDetailView = ({
           </p>
 
           <div
-            className={`prose max-w-none transition-colors ${isDarkMode ? "prose-invert" : "prose-slate"}`}
+            className={`prose max-w-none transition-colors prose-li:marker:text-slate-800 dark:prose-li:marker:text-slate-200 ${isDarkMode ? "prose-invert" : "prose-slate"}`}
           >
             <div
-              className={`text-lg leading-[1.8] whitespace-pre-wrap font-sans ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
+              className={`text-lg leading-[1.8] whitespace-pre-wrap font-sans min-h-[500px] ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
+              dangerouslySetInnerHTML={{
+                __html: currentArticlePageContent.includes("<") 
+                        ? currentArticlePageContent 
+                        : currentArticlePageContent.replace(/\n/g, '<br/>')
+              }}
             >
-              {totalArticlePages > 1
-                ? currentArticlePageContent
-                : selectedArticle.content}
             </div>
           </div>
-        </div>
 
-        {totalArticlePages > 1 && (
-          <div className="mt-auto pt-16 pb-4">
-            <div
-              className={`flex justify-center flex-col items-center gap-4 border-t pt-8 ${isDarkMode ? "border-slate-800" : "border-slate-100"}`}
-            >
-              <div
-                className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-600" : "text-slate-400"}`}
+          {selectedArticle.attachmentName && selectedArticle.attachmentData && (
+            <div className={`mt-12 p-5 border rounded-xl flex items-center justify-between ${isDarkMode ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
+              <div className="flex flex-col">
+                <span className={`text-sm font-semibold mb-1 ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}>
+                  Attached Document
+                </span>
+                <span className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
+                  {selectedArticle.attachmentName}
+                </span>
+              </div>
+              <a
+                href={selectedArticle.attachmentData}
+                download={selectedArticle.attachmentName}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
               >
-                PAGE {articlePage} OF {totalArticlePages}
-              </div>
-              <div className="flex justify-center items-center gap-2">
-                <button
-                  disabled={articlePage === 1}
-                  onClick={() =>
-                    setArticlePage((prev: number) => Math.max(1, prev - 1))
-                  }
-                  className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
-                >
-                  Previous
-                </button>
+                <Download className="w-4 h-4" />
+                Download
+              </a>
+            </div>
+          )}
 
-                <div className="flex items-center gap-1.5">
-                  {Array.from({ length: totalArticlePages }).map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setArticlePage(i + 1)}
-                      className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm transition-all ${
-                        articlePage === i + 1
-                          ? "bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20"
-                          : isDarkMode
-                            ? "bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-800"
-                            : "bg-white text-slate-600 hover:bg-slate-50 border border-slate-200 line-height-1"
-                      }`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
+          {totalArticlePages > 1 && (
+            <div className="mt-12 mb-8">
+              <div
+                className={`flex justify-center flex-col items-center gap-4`}
+              >
+                <div
+                  className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-600" : "text-slate-400"}`}
+                >
+                  PAGE {articlePage} OF {totalArticlePages}
                 </div>
+                <div className="flex justify-center items-center gap-2">
+                  <button
+                    disabled={articlePage === 1}
+                    onClick={() =>
+                      setArticlePage((prev: number) => Math.max(1, prev - 1))
+                    }
+                    className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
+                  >
+                    Previous
+                  </button>
 
-                <button
-                  disabled={articlePage === totalArticlePages}
-                  onClick={() =>
-                    setArticlePage((prev: number) =>
-                      Math.min(totalArticlePages, prev + 1),
-                    )
-                  }
-                  className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
-                >
-                  Next
-                </button>
+                  <div className={`flex items-center gap-2 mx-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+                    <span>Page</span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={totalArticlePages}
+                      value={articlePage}
+                      onChange={(e) => {
+                        let val = parseInt(e.target.value);
+                        if (!isNaN(val)) setArticlePage(Math.min(Math.max(1, val), totalArticlePages));
+                      }}
+                      className={`w-16 px-2 py-1.5 text-center border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors ${isDarkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800"}`}
+                    />
+                    <span>of {totalArticlePages}</span>
+                  </div>
+
+                  <button
+                    disabled={articlePage === totalArticlePages}
+                    onClick={() =>
+                      setArticlePage((prev: number) =>
+                        Math.min(totalArticlePages, prev + 1),
+                      )
+                    }
+                    className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
     </div>
   );
 };

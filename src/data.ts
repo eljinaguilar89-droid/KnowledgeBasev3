@@ -18,7 +18,7 @@ export const mockArticles = [
   {
     id: "2",
     title: "Incident Response Runbook — P1/P2",
-    badge: "Critical",
+    badge: "",
     excerpt:
       "Step-by-step escalation matrix, war room setup, comms templates, and regulatory notification timelines.",
     content:
@@ -82,7 +82,7 @@ export const mockArticles = [
   {
     id: "6",
     title: "PostgreSQL HA Cluster Configuration",
-    badge: "Update",
+    badge: "",
     excerpt:
       "Patroni and etcd configuration for highly available PostgreSQL 15 database clusters.",
     content:
@@ -145,7 +145,7 @@ export const mockArticles = [
   {
     id: "10",
     title: "Information Security Policy 2026",
-    badge: "Required",
+    badge: "",
     excerpt:
       "Annual mandatory reading for all IT staff. Covers data classification and acceptable use.",
     content:

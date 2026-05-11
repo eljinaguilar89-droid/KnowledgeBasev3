@@ -57,7 +57,7 @@ export const Topbar = ({
     >
       <div className="flex items-center gap-3">
         <div className="bg-blue-600 text-white text-xs font-semibold px-2.5 py-1 rounded-md tracking-wider shadow-sm shadow-blue-500/20">
-          PSBank I&amp;E
+          IED
         </div>
         <div
           className={`text-sm font-semibold tracking-wide hidden sm:block ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}
@@ -361,6 +361,12 @@ export const Sidebar = (props: any) => {
             icon={BarChartIcon}
             label="Analytics"
             view="analytics"
+            {...itemProps}
+          />
+          <SidebarItem
+            icon={Server}
+            label="API Integration"
+            view="api"
             {...itemProps}
           />
         </SidebarSection>

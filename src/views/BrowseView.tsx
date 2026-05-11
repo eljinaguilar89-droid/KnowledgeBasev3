@@ -155,22 +155,20 @@ export const BrowseView = ({
               Previous
             </button>
 
-            <div className="flex items-center gap-1.5 mx-2">
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setBrowsePage(i + 1)}
-                  className={`w-9 h-9 flex items-center justify-center rounded-lg text-sm transition-all ${
-                    browsePage === i + 1
-                      ? "bg-blue-600 text-white font-bold shadow-lg shadow-blue-500/20"
-                      : isDarkMode
-                        ? "bg-slate-900 text-slate-400 border border-slate-800 hover:bg-slate-800"
-                        : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 line-height-1"
-                  }`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+            <div className={`flex items-center gap-2 mx-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+              <span>Page</span>
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={browsePage}
+                onChange={(e) => {
+                  let val = parseInt(e.target.value);
+                  if (!isNaN(val)) setBrowsePage(Math.min(Math.max(1, val), totalPages));
+                }}
+                className={`w-16 px-2 py-1.5 text-center border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors ${isDarkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800"}`}
+              />
+              <span>of {totalPages}</span>
             </div>
 
             <button

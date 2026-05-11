@@ -6,6 +6,7 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   role: text("role").default("NEO").notNull(),
+  apiKey: text("api_key"),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
@@ -33,5 +34,7 @@ export const articles = pgTable("articles", {
   badge: text("badge"),
   status: text("status").notNull(),
   accessLevel: text("access_level").default("Public").notNull(), // Public, Internal, Confidential, Restricted
+  attachmentName: text("attachment_name"),
+  attachmentData: text("attachment_data"),
   createdAt: timestamp("created_at").defaultNow(),
 });

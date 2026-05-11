@@ -12,6 +12,10 @@ import { AuthView } from "./views/AuthView";
 import { UsersView } from "./views/UsersView";
 import { useAuth } from "./AuthContext";
 
+import { ApiIntegrationView } from "./views/ApiIntegrationView";
+
+import { ApiIntegrationView } from "./views/ApiIntegrationView";
+
 export default function App() {
   const { user } = useAuth();
   const [currentView, setCurrentView] = useState<
@@ -344,6 +348,8 @@ export default function App() {
           )}
           {currentView === "audit" && <AuditView isDarkMode={isDarkMode} />}
           {currentView === "users" && <UsersView isDarkMode={isDarkMode} />}
+          {currentView === "api" && <ApiIntegrationView isDarkMode={isDarkMode} />}
+          {currentView === "api" && <ApiIntegrationView isDarkMode={isDarkMode} />}
           {currentView === "analytics" && (
             <AnalyticsView isDarkMode={isDarkMode} allArticles={visibleArticles} />
           )}
