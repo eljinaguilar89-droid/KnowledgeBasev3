@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, integer, json } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: text("id").primaryKey(),
@@ -36,5 +36,6 @@ export const articles = pgTable("articles", {
   accessLevel: text("access_level").default("Public").notNull(), // Public, Internal, Confidential, Restricted
   attachmentName: text("attachment_name"),
   attachmentData: text("attachment_data"),
+  attachments: json("attachments").$type<{ name: string; data: string }[]>(),
   createdAt: timestamp("created_at").defaultNow(),
 });
