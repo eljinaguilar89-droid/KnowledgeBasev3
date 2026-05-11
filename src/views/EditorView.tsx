@@ -29,6 +29,11 @@ export const EditorView = ({
   refreshArticles?: () => void;
   categories?: any[];
 }) => {
+  useEffect(() => {
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
   const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -36,11 +41,28 @@ export const EditorView = ({
   const [category, setCategory] = useState("Network");
   const [accessLevel, setAccessLevel] = useState("Public");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fileProgress, setFileProgress] = useState<Record<string, number>>({});
   const contentRef = React.useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<string[]>([""]);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const previousScrollHeight = React.useRef<number>(0);
   const [savedRange, setSavedRange] = useState<Range | null>(null);
+
+  const handleAddFiles = (newFiles: File[]) => {
+    setFiles((prev) => [...prev, ...newFiles]);
+    newFiles.forEach((file) => {
+      setFileProgress((prev) => ({ ...prev, [file.name]: 0 }));
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        if (progress >= 100) {
+          progress = 100;
+          clearInterval(interval);
+        }
+        setFileProgress((prev) => ({ ...prev, [file.name]: progress }));
+      }, 50);
+    });
+  };
 
   const saveSelection = () => {
     const sel = window.getSelection();
@@ -88,7 +110,7 @@ export const EditorView = ({
     e.preventDefault();
     setIsDragging(false);
     if (e.dataTransfer.files?.length)
-      setFiles([...files, ...Array.from(e.dataTransfer.files)]);
+      handleAddFiles(Array.from(e.dataTransfer.files));
   };
 
   const execCmd = (cmd: string, val?: string) => {
@@ -122,34 +144,38 @@ export const EditorView = ({
           "DevOps",
           "API Catalog",
           "Change Mgmt",
-          "Policies & SOPs"
+          "Policies & SOPs",
+          "Audit Logs"
         ];
         if (allowed.includes(category)) finalStatus = "Published";
       } else if (user.role === "Sec & Comp. Manager") {
-        const allowed = ["Security", "Policies & SOPs"];
+        const allowed = ["Security", "Policies & SOPs", "Audit Logs"];
         if (allowed.includes(category)) finalStatus = "Published";
       }
     }
 
     let attachmentNameVal = null;
     let attachmentDataVal = null;
+    let attachmentsArray: {name: string, data: string}[] = [];
 
     if (files.length > 0) {
-      const file = files[0];
-      attachmentNameVal = file.name;
+      for (const file of files) {
+        try {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          attachmentsArray.push({ name: file.name, data: dataUrl });
+        } catch (err) {
+          console.error(`Failed to read file ${file.name}`, err);
+        }
+      }
       
-      try {
-        attachmentDataVal = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-             // result will be a data URL like "data:image/jpeg;base64,..."
-             resolve(reader.result as string);
-          };
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      } catch (err) {
-        console.error("Failed to read file", err);
+      if (attachmentsArray.length > 0) {
+        attachmentNameVal = attachmentsArray[0].name;
+        attachmentDataVal = attachmentsArray[0].data;
       }
     }
 
@@ -170,6 +196,7 @@ export const EditorView = ({
         views: 0,
         attachmentName: attachmentNameVal,
         attachmentData: attachmentDataVal,
+        attachments: attachmentsArray,
       };
 
       await fetch("/api/articles", {
@@ -195,10 +222,10 @@ export const EditorView = ({
   if (isHead) willPublishDirectly = true;
   else if (user?.role === "DevOps & Infra Manager") {
     willPublishDirectly = [
-      "Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"
+      "Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs", "Audit Logs"
     ].includes(category);
   } else if (user?.role === "Sec & Comp. Manager") {
-    willPublishDirectly = ["Security", "Policies & SOPs"].includes(category);
+    willPublishDirectly = ["Security", "Policies & SOPs", "Audit Logs"].includes(category);
   }
 
   return (
@@ -517,7 +544,7 @@ export const EditorView = ({
                 id="file-upload"
                 onChange={(e) => {
                   if (e.target.files)
-                    setFiles([...files, ...Array.from(e.target.files)]);
+                    handleAddFiles(Array.from(e.target.files));
                 }}
               />
               <label
@@ -543,24 +570,41 @@ export const EditorView = ({
 
             {files.length > 0 && (
               <ul className="mt-4 space-y-2">
-                {files.map((file, idx) => (
-                  <li
-                    key={idx}
-                    className={`flex items-center justify-between text-sm p-3 rounded-lg border shadow-sm transition-colors ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}
-                  >
-                    <span className="truncate max-w-[80%] font-medium">
-                      {file.name}
-                    </span>
-                    <button
-                      onClick={() =>
-                        setFiles(files.filter((_, i) => i !== idx))
-                      }
-                      className="p-1 text-slate-500 hover:text-red-500 transition-colors"
+                {files.map((file, idx) => {
+                  const progress = fileProgress[file.name] ?? 0;
+                  return (
+                    <li
+                      key={idx}
+                      className={`flex flex-col text-sm p-3 rounded-lg border shadow-sm transition-colors ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-300" : "bg-white border-slate-200 text-slate-700"}`}
                     >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </li>
-                ))}
+                      <div className="flex items-center justify-between">
+                        <span className="truncate max-w-[80%] font-medium">
+                          {file.name}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setFiles(files.filter((_, i) => i !== idx));
+                            setFileProgress((prev) => {
+                              const newP = { ...prev };
+                              delete newP[file.name];
+                              return newP;
+                            });
+                          }}
+                          className="p-1 text-slate-500 hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="mt-2 w-full h-1.5 bg-slate-200 rounded-full overflow-hidden dark:bg-slate-700">
+                         <div 
+                            className={`h-full transition-all duration-75 ${progress === 100 ? "bg-green-500" : "bg-blue-500"}`}
+                            style={{ width: `${progress}%` }}
+                         ></div>
+                      </div>
+                    </li>
+                  )
+                })}
               </ul>
             )}
           </div>

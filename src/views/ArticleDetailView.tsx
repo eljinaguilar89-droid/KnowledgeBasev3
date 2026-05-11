@@ -16,6 +16,10 @@ export const ArticleDetailView = ({
   const viewIncrementedRef = React.useRef<string | null>(null);
 
   useEffect(() => {
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [articlePage]);
+
+  useEffect(() => {
     if (selectedArticle?.id && viewIncrementedRef.current !== selectedArticle.id) {
       viewIncrementedRef.current = selectedArticle.id;
       if (selectedArticle.status === "Published" || selectedArticle.status === "Pending") {
@@ -243,7 +247,7 @@ export const ArticleDetailView = ({
             {selectedArticle.title}
           </h1>
           <p
-            className={`text-xl leading-relaxed mb-10 pb-8 border-b ${isDarkMode ? "text-slate-400 border-slate-800" : "text-slate-500 border-slate-100"}`}
+            className={`text-xl leading-relaxed mb-16 pb-8 border-b ${isDarkMode ? "text-slate-400 border-slate-800" : "text-slate-500 border-slate-100"}`}
           >
             {selectedArticle.excerpt}
           </p>
@@ -262,81 +266,84 @@ export const ArticleDetailView = ({
             </div>
           </div>
 
-          {selectedArticle.attachmentName && selectedArticle.attachmentData && (
-            <div className={`mt-12 p-5 border rounded-xl flex items-center justify-between ${isDarkMode ? "bg-slate-800/50 border-slate-700" : "bg-slate-50 border-slate-200"}`}>
-              <div className="flex flex-col">
-                <span className={`text-sm font-semibold mb-1 ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}>
+        </div>
+      </div>
+
+      {(selectedArticle.attachments?.length > 0 || (selectedArticle.attachmentName && selectedArticle.attachmentData)) && (
+        <div className={`mb-8 flex flex-col gap-3`}>
+          <h3 className={`text-lg font-semibold ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}>
+            Attachments
+          </h3>
+          {(selectedArticle.attachments && selectedArticle.attachments.length > 0 ? selectedArticle.attachments : [{name: selectedArticle.attachmentName, data: selectedArticle.attachmentData}]).map((att: any, idx: number) => (
+            <div key={idx} className={`p-4 border rounded-xl flex items-center justify-between shadow-sm ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
+              <div className="flex flex-col truncate mr-4">
+                <span className={`text-sm font-semibold mb-1 ${isDarkMode ? "text-slate-200" : "text-slate-800"} truncate`}>
                   Attached Document
                 </span>
-                <span className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"}`}>
-                  {selectedArticle.attachmentName}
+                <span className={`text-xs ${isDarkMode ? "text-slate-400" : "text-slate-500"} truncate`}>
+                  {att.name}
                 </span>
               </div>
               <a
-                href={selectedArticle.attachmentData}
-                download={selectedArticle.attachmentName}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
+                href={att.data}
+                download={att.name}
+                className="shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
               >
                 <Download className="w-4 h-4" />
                 Download
               </a>
             </div>
-          )}
-
-          {totalArticlePages > 1 && (
-            <div className="mt-12 mb-8">
-              <div
-                className={`flex justify-center flex-col items-center gap-4`}
-              >
-                <div
-                  className={`text-[10px] font-bold uppercase tracking-[0.2em] ${isDarkMode ? "text-slate-600" : "text-slate-400"}`}
-                >
-                  PAGE {articlePage} OF {totalArticlePages}
-                </div>
-                <div className="flex justify-center items-center gap-2">
-                  <button
-                    disabled={articlePage === 1}
-                    onClick={() =>
-                      setArticlePage((prev: number) => Math.max(1, prev - 1))
-                    }
-                    className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
-                  >
-                    Previous
-                  </button>
-
-                  <div className={`flex items-center gap-2 mx-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
-                    <span>Page</span>
-                    <input
-                      type="number"
-                      min={1}
-                      max={totalArticlePages}
-                      value={articlePage}
-                      onChange={(e) => {
-                        let val = parseInt(e.target.value);
-                        if (!isNaN(val)) setArticlePage(Math.min(Math.max(1, val), totalArticlePages));
-                      }}
-                      className={`w-16 px-2 py-1.5 text-center border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors ${isDarkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800"}`}
-                    />
-                    <span>of {totalArticlePages}</span>
-                  </div>
-
-                  <button
-                    disabled={articlePage === totalArticlePages}
-                    onClick={() =>
-                      setArticlePage((prev: number) =>
-                        Math.min(totalArticlePages, prev + 1),
-                      )
-                    }
-                    className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
-                  >
-                    Next
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+          ))}
         </div>
-      </div>
+      )}
+
+      {totalArticlePages > 1 && (
+        <div className="mb-8">
+          <div
+            className={`flex justify-center flex-col items-center gap-4`}
+          >
+            <div className="flex justify-center items-center gap-2">
+              <button
+                disabled={articlePage === 1}
+                onClick={() =>
+                  setArticlePage((prev: number) => Math.max(1, prev - 1))
+                }
+                className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
+              >
+                Previous
+              </button>
+
+              <div className={`flex items-center gap-2 mx-2 text-sm ${isDarkMode ? "text-slate-300" : "text-slate-600"}`}>
+                <span>Page</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={totalArticlePages}
+                  value={articlePage}
+                  onChange={(e) => {
+                    let val = parseInt(e.target.value);
+                    if (!isNaN(val)) setArticlePage(Math.min(Math.max(1, val), totalArticlePages));
+                  }}
+                  className={`w-16 px-2 py-1.5 text-center border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-colors ${isDarkMode ? "bg-slate-900 border-slate-700 text-slate-200" : "bg-white border-slate-300 text-slate-800"}`}
+                />
+                <span>of {totalArticlePages}</span>
+              </div>
+
+              <button
+                disabled={articlePage === totalArticlePages}
+                onClick={() =>
+                  setArticlePage((prev: number) =>
+                    Math.min(totalArticlePages, prev + 1),
+                  )
+                }
+                className={`px-4 py-2 text-sm border rounded-lg transition-colors ${isDarkMode ? "bg-slate-950 border-slate-800 text-slate-400 disabled:opacity-20 hover:bg-slate-800" : "bg-white border-slate-300 text-slate-600 disabled:opacity-50 hover:bg-slate-50"}`}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

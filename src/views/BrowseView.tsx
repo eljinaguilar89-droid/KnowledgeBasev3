@@ -84,6 +84,7 @@ export const BrowseView = ({
             </optgroup>
             <optgroup label="Governance">
               <option>Policies & SOPs</option>
+              <option>Audit Logs</option>
             </optgroup>
           </select>
           <button

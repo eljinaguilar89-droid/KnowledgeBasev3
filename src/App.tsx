@@ -6,14 +6,12 @@ import { DashboardView } from "./views/DashboardView";
 import { BrowseView } from "./views/BrowseView";
 import { ArticleDetailView } from "./views/ArticleDetailView";
 import { EditorView } from "./views/EditorView";
-import { AuditView } from "./views/AuditView";
 import { AnalyticsView } from "./views/AnalyticsView";
 import { AuthView } from "./views/AuthView";
 import { UsersView } from "./views/UsersView";
+import { ManualView } from "./views/ManualView";
+import { SystemLogsView } from "./views/SystemLogsView";
 import { useAuth } from "./AuthContext";
-
-import { ApiIntegrationView } from "./views/ApiIntegrationView";
-
 import { ApiIntegrationView } from "./views/ApiIntegrationView";
 
 export default function App() {
@@ -23,9 +21,11 @@ export default function App() {
     | "browse"
     | "article"
     | "editor"
-    | "audit"
     | "analytics"
     | "users"
+    | "api"
+    | "manual"
+    | "logs"
   >("dashboard");
   const [activeTab, setActiveTab] = useState("Overview");
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(
@@ -78,6 +78,7 @@ export default function App() {
 
   const [showSettings, setShowSettings] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [readNotifs, setReadNotifs] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem('readNotifs');
@@ -98,15 +99,15 @@ export default function App() {
       | "browse"
       | "article"
       | "editor"
-      | "audit"
       | "analytics"
-      | "users",
+      | "users"
+      | "api"
+      | "manual"
+      | "logs",
     id?: string,
   ) => {
     // Viewer cannot see editor
     if (view === "editor" && user?.role === "Viewer") return;
-    // Only Admin can see audit / users
-    if (view === "audit" && !["IED Head", "DevOps & Infra Manager", "Sec & Comp. Manager"].includes(user?.role || "")) return;
     if (view === "users" && user?.role !== "IED Head") return;
 
     setCurrentView(view);
@@ -289,7 +290,7 @@ export default function App() {
         setShowNotifs={setShowNotifs}
         setShowSettings={setShowSettings}
         isDarkMode={isDarkMode}
-        hasNotifs={unreadNotifs.length > 0}
+        hasNotifs={notificationsEnabled && unreadNotifs.length > 0}
       />
 
       <div className="flex flex-1 overflow-hidden bg-inherit">
@@ -346,10 +347,10 @@ export default function App() {
               categories={categories}
             />
           )}
-          {currentView === "audit" && <AuditView isDarkMode={isDarkMode} />}
           {currentView === "users" && <UsersView isDarkMode={isDarkMode} />}
           {currentView === "api" && <ApiIntegrationView isDarkMode={isDarkMode} />}
-          {currentView === "api" && <ApiIntegrationView isDarkMode={isDarkMode} />}
+          {currentView === "manual" && <ManualView isDarkMode={isDarkMode} />}
+          {currentView === "logs" && <SystemLogsView isDarkMode={isDarkMode} />}
           {currentView === "analytics" && (
             <AnalyticsView isDarkMode={isDarkMode} allArticles={visibleArticles} />
           )}
@@ -411,15 +412,16 @@ export default function App() {
                 <label
                   className={`text-sm font-medium ${isDarkMode ? "text-slate-300" : "text-slate-700"} block mb-2`}
                 >
-                  Email Notifications
+                  Notifications
                 </label>
-                <select
-                  className={`w-full ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-200" : "bg-slate-50 border-slate-300"} border rounded-xl text-sm p-3 focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+                <button
+                  onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:ring-offset-2 ${notificationsEnabled ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"}`}
                 >
-                  <option>All activity</option>
-                  <option>Mentions only</option>
-                  <option>Disabled</option>
-                </select>
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notificationsEnabled ? "translate-x-6" : "translate-x-1"}`}
+                  />
+                </button>
               </div>
             </div>
             <div

@@ -251,6 +251,15 @@ export const mockCategories = [
     colorClass: "bg-rose-100 text-rose-700",
     group: "Governance"
   },
+  {
+    id: "cat-11",
+    title: "Audit Logs",
+    filterCategory: "Audit Logs",
+    icon: "ShieldAlert",
+    count: "0 articles · 0 pending",
+    colorClass: "bg-purple-100 text-purple-700",
+    group: "Governance"
+  }
 ];
 
 export const mockActivities = [

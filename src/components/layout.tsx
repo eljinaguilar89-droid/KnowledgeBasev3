@@ -23,6 +23,8 @@ import {
   ArrowUpRight,
   LogOut,
   UserCog,
+  Book,
+  Terminal,
 } from "lucide-react";
 import { IconButton } from "./ui";
 import { mockActivities } from "../data";
@@ -345,7 +347,8 @@ export const Sidebar = (props: any) => {
             <SidebarItem
               icon={ClipboardSignature}
               label="Audit Logs"
-              view="audit"
+              view="browse"
+              categoryTarget="Audit Logs"
               {...itemProps}
             />
           )}
@@ -361,6 +364,21 @@ export const Sidebar = (props: any) => {
             icon={BarChartIcon}
             label="Analytics"
             view="analytics"
+            {...itemProps}
+          />
+        </SidebarSection>
+        
+        <SidebarSection title="Help & Resources" isDarkMode={props.isDarkMode}>
+          <SidebarItem
+            icon={Book}
+            label="Platform Manual"
+            view="manual"
+            {...itemProps}
+          />
+          <SidebarItem
+            icon={Terminal}
+            label="System Logs"
+            view="logs"
             {...itemProps}
           />
           <SidebarItem
@@ -487,17 +505,7 @@ export const RightPanel = ({
                   <span>{user.role === "DevOps Engineer" ? "My Pending Reviews" : "Review Articles"}</span>
                 </div>
               </button>
-              {["IED Head", "DevOps & Infra Manager", "Sec & Comp. Manager"].includes(user.role) && (
-                <button
-                  onClick={() => handleNavigate("audit")}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-colors ${isDarkMode ? "text-slate-400 hover:bg-slate-800 hover:text-slate-200" : "text-slate-600 hover:bg-slate-200 hover:text-slate-900"}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <History className="w-4 h-4 text-slate-500" />
-                    <span>View audit trail</span>
-                  </div>
-                </button>
-              )}
+              {/* Removed audit quick link */}
               {user.role === "IED Head" && (
                 <button
                   onClick={() => handleNavigate("users")}

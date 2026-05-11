@@ -94,14 +94,13 @@ export const DashboardView = ({
   if (user?.role === "DevOps Engineer") {
     tabsToMap = ["Overview", "My Articles", "My Pending Reviews"];
   } else if (user?.role === "DevOps & Infra Manager" || user?.role === "Sec & Comp. Manager") {
-    tabsToMap = ["Overview", "My Articles", "To Review & Publish", "Audit Trail"];
+    tabsToMap = ["Overview", "My Articles", "To Review & Publish"];
   } else if (user?.role === "IED Head") {
     tabsToMap = [
       "Overview",
       "My Articles",
       "To Review & Publish",
       "Compliance",
-      "Audit Trail",
     ];
   }
 
@@ -172,15 +171,15 @@ export const DashboardView = ({
                   isDarkMode={isDarkMode}
                 />
                 <StatCard
-                  title="Compliance Coverage"
-                  value="94%"
-                  subtext="BSP, ISO 27001"
+                  title="Total Categories"
+                  value={String(categories.length || 0)}
+                  subtext="Across the platform"
                   isDarkMode={isDarkMode}
                 />
                 <StatCard
                   title="Active Contributors"
                   value={String(uniqueContributors || 0)}
-                  subtext={`Across ${uniqueTeams} teams`}
+                  subtext={`Across ${uniqueTeams} categories`}
                   isDarkMode={isDarkMode}
                 />
               </div>
@@ -239,7 +238,11 @@ export const DashboardView = ({
                       <p
                         className={`text-xs ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
                       >
-                        {cat.count}
+                        {(() => {
+                           const cArticles = allArticles.filter((a: any) => a.category === cat.filterCategory || cat.filterCategory === "All");
+                           const cPending = cArticles.filter((a: any) => a.status === "Pending");
+                           return `${cArticles.length} articles · ${cPending.length} pending`;
+                        })()}
                       </p>
                     </button>
                   ))}
@@ -319,32 +322,7 @@ export const DashboardView = ({
         </div>
       )}
 
-      {activeTab === "Audit Trail" && (
-        <div
-          className={`border rounded-xl p-8 text-center shadow-sm transition-colors ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}
-        >
-          <History
-            className={`w-10 h-10 mx-auto mb-4 ${isDarkMode ? "text-slate-600" : "text-slate-200"}`}
-          />
-          <h3
-            className={`text-lg font-medium mb-2 ${isDarkMode ? "text-slate-200" : "text-slate-700"}`}
-          >
-            Audit Trail
-          </h3>
-          <p
-            className={`text-sm mb-6 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}
-          >
-            View complete history of article modifications, approvals, and
-            flags.
-          </p>
-          <button
-            onClick={() => handleNavigate("audit")}
-            className={`px-6 py-2.5 transition-colors rounded-lg text-sm font-semibold ${isDarkMode ? "bg-blue-900/40 text-blue-400 hover:bg-blue-900/60" : "bg-blue-100 text-blue-700 hover:bg-blue-200"}`}
-          >
-            Open full trail
-          </button>
-        </div>
-      )}
+      {/* Removed Audit Trail Tab */}
 
       <div className="h-8"></div>
     </div>
