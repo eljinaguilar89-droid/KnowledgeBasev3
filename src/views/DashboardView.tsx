@@ -44,13 +44,18 @@ export const DashboardView = ({
     return false;
   }).length;
   
-  const pendingForUser = allArticles.filter((a: any) => {
+  const pendingForUserArticles = allArticles.filter((a: any) => {
     if (a.status !== "Pending" || a.author === user?.name) return false;
     if (user?.role === "IED Head") return true;
     if (user?.role === "DevOps & Infra Manager") return ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
     if (user?.role === "Sec & Comp. Manager") return ["Security", "Policies & SOPs"].includes(a.category);
     return false;
-  }).length;
+  });
+  const pendingForUser = pendingForUserArticles.length;
+  const pendingCategories = Array.from(new Set(pendingForUserArticles.map((a: any) => String(a.category))));
+  const reviewContext = pendingCategories.length > 0 
+    ? (pendingCategories.length <= 2 ? pendingCategories.join(" and ") : pendingCategories[0] + " and other")
+    : "compliance";
 
   const overdueCount = allArticles.filter((a: any) => {
     if (a.status !== "Pending" || a.author === user?.name) return false;
@@ -116,7 +121,7 @@ export const DashboardView = ({
           />
           <p className="text-sm">
             <span className="font-semibold">Action Required:</span> {pendingForUser} article{pendingForUser > 1 ? "s" : ""} pending
-            for BSP compliance review right now.
+            for {reviewContext} review right now.
             <button
               onClick={() => setActiveTab("To Review & Publish")}
               className={`ml-2 font-semibold underline hover:opacity-80 ${isDarkMode ? "decoration-blue-700" : "decoration-blue-300"}`}
