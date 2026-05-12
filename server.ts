@@ -28,10 +28,36 @@ async function startServer() {
     { id: "1", level: "INFO", message: "System startup complete", date: new Date().toISOString().split('T')[0], createdAt: new Date() }
   ];
 
+  const logEvent = async (level: string, message: string) => {
+    try {
+      const date = new Date().toISOString().split('T')[0];
+      if (!process.env.DATABASE_URL) {
+        inMemoryLogs.unshift({ id: Date.now().toString(), level, message, date, createdAt: new Date() });
+        return;
+      }
+      await db.insert(systemLogs).values({
+        id: Date.now().toString(),
+        level,
+        message,
+        date
+      });
+    } catch (e) {
+      console.error("Failed to log event", e);
+    }
+  };
+
+  // Log on startup
+  logEvent("INFO", "System startup complete").catch(console.error);
+
   app.get("/api/logs", async (req, res) => {
     try {
       const date = req.query.date as string;
       if (!date) return res.status(400).json({ error: "Missing date query parameter" });
+      
+      const track = req.query.track as string;
+      if (track === "true") {
+        await logEvent("INFO", `Audit logs viewed by user`);
+      }
 
       if (!process.env.DATABASE_URL) {
         return res.json(inMemoryLogs.filter(l => l.date === date));
@@ -88,24 +114,6 @@ async function startServer() {
       res.status(500).json({ error: "Failed to fetch categories" });
     }
   });
-
-  const logEvent = async (level: string, message: string) => {
-    try {
-      const date = new Date().toISOString().split('T')[0];
-      if (!process.env.DATABASE_URL) {
-        inMemoryLogs.unshift({ id: Date.now().toString(), level, message, date, createdAt: new Date() });
-        return;
-      }
-      await db.insert(systemLogs).values({
-        id: Date.now().toString(),
-        level,
-        message,
-        date
-      });
-    } catch (e) {
-      console.error("Failed to log event", e);
-    }
-  };
 
   app.post("/api/categories", async (req, res) => {
     try {

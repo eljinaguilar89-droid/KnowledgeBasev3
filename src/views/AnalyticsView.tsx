@@ -71,11 +71,11 @@ export const AnalyticsView = ({
     // E.g., make mid-week higher
     const weeklyCurve = [0.4, 0.8, 1.2, 1.3, 1.1, 0.9, 0.5]; // Sun-Sat multiplier
     const dailyBase = totalViews / 30; // pretend this is 1/30th of a month
-    const value = Math.max(10, Math.floor(dailyBase * weeklyCurve[daySeed] + (i * 5)));
+    const value = totalViews > 0 ? Math.floor(dailyBase * weeklyCurve[daySeed] + (totalViews > 50 ? i * 2 : 0)) : 0;
 
     viewData.push({
       name: days[daySeed],
-      views: value,
+      views: totalViews === 0 ? 0 : Math.max(0, value),
     });
   }
 

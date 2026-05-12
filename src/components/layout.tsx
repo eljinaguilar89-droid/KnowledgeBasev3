@@ -384,7 +384,7 @@ export const Sidebar = (props: any) => {
           />
           <SidebarItem
             icon={Terminal}
-            label="System Logs"
+            label="Audit Logs"
             view="logs"
             {...itemProps}
           />
