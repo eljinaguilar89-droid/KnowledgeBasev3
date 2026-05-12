@@ -362,13 +362,23 @@ async function startServer() {
 
   app.post("/api/articles", async (req, res) => {
     try {
+      // Determine the smallest unused positive integer ID (1,2,3...).
+      // This picks the next incremental ID regardless of existing timestamp-style ids.
       if (!process.env.DATABASE_URL) {
-        const newArt = { ...req.body, id: Date.now().toString() };
+        const existing = new Set(inMemoryArticles.map((a) => String(a.id)));
+        let candidate = 1;
+        while (existing.has(String(candidate))) candidate++;
+        const newArt = { ...req.body, id: String(candidate) };
         inMemoryArticles.unshift(newArt);
         await logEvent("INFO", `Article created (memory): ${newArt.title}`);
         return res.status(201).json(newArt);
       }
-      const newArticle = await db.insert(articles).values(req.body).returning();
+
+      const rows = await db.select({ id: articles.id }).from(articles);
+      const existing = new Set(rows.map((r) => String(r.id)));
+      let candidate = 1;
+      while (existing.has(String(candidate))) candidate++;
+      const newArticle = await db.insert(articles).values({ ...req.body, id: String(candidate) }).returning();
       await logEvent("INFO", `Article created: ${newArticle[0].title}`);
       res.status(201).json(newArticle[0]);
     } catch (error) {

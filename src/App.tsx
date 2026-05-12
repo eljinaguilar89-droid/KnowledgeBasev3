@@ -162,11 +162,12 @@ export default function App() {
           "DevOps",
           "API Catalog",
           "Change Mgmt",
-          "Policies & SOPs"
+          "Policies & SOPs",
+          "Audit Logs"
         ].includes(category);
       }
       if (user && user.role === "Sec & Comp. Manager") {
-        return ["Security", "Policies & SOPs"].includes(category);
+        return ["Security", "Policies & SOPs", "Audit Logs"].includes(category);
       }
       if (user && user.role === "DevOps Engineer") {
         // According to user: "if created under infra subcategory, role that can see infra can only see it"
@@ -240,13 +241,15 @@ export default function App() {
           "DevOps",
           "API Catalog",
           "Change Mgmt",
-          "Policies & SOPs"
+          "Policies & SOPs",
+          "Audit Logs"
         ].includes(a.category);
       }
       if (user.role === "Sec & Comp. Manager") {
         return [
           "Security",
-          "Policies & SOPs"
+          "Policies & SOPs",
+          "Audit Logs"
         ].includes(a.category);
       }
       return false;
@@ -283,9 +286,9 @@ export default function App() {
     if (user.role === "IED Head") {
         toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name);
     } else if (user.role === "DevOps & Infra Manager") {
-        toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name && ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category));
+      toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name && ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs", "Audit Logs"].includes(a.category));
     } else if (user.role === "Sec & Comp. Manager") {
-        toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name && ["Security", "Policies & SOPs"].includes(a.category));
+      toReview = articles.filter(a => a.status === "Pending" && a.author !== user.name && ["Security", "Policies & SOPs", "Audit Logs"].includes(a.category));
     }
 
     toReview.forEach((a) => {

@@ -46,8 +46,8 @@ export const DashboardView = ({
   
   const pendingForUserArticles = allArticles.filter((a: any) => {
     if (a.status !== "Pending" || a.author === user?.name) return false;
-    if (user?.role === "DevOps & Infra Manager") return ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
-    if (user?.role === "Sec & Comp. Manager") return ["Security", "Policies & SOPs"].includes(a.category);
+    if (user?.role === "DevOps & Infra Manager") return ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs", "Audit Logs"].includes(a.category);
+    if (user?.role === "Sec & Comp. Manager") return ["Security", "Policies & SOPs", "Audit Logs"].includes(a.category);
     return false;
   });
   const pendingForUser = pendingForUserArticles.length;
@@ -60,8 +60,8 @@ export const DashboardView = ({
     if (a.status !== "Pending" || a.author === user?.name) return false;
     
     let isForUser = false;
-    if (user?.role === "DevOps & Infra Manager") isForUser = ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
-    else if (user?.role === "Sec & Comp. Manager") isForUser = ["Security", "Policies & SOPs"].includes(a.category);
+    if (user?.role === "DevOps & Infra Manager") isForUser = ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs", "Audit Logs"].includes(a.category);
+    else if (user?.role === "Sec & Comp. Manager") isForUser = ["Security", "Policies & SOPs", "Audit Logs"].includes(a.category);
 
     if (!isForUser) return false;
 

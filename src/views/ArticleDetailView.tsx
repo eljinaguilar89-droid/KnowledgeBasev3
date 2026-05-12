@@ -98,11 +98,11 @@ export const ArticleDetailView = ({
       let autoApprove = false;
       if (user?.role === "IED Head") autoApprove = true;
       else if (user?.role === "DevOps & Infra Manager") {
-        if (["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(selectedArticle.category)) {
+        if (["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs", "Audit Logs"].includes(selectedArticle.category)) {
           autoApprove = true;
         }
       } else if (user?.role === "Sec & Comp. Manager") {
-        if (["Security", "Policies & SOPs"].includes(selectedArticle.category)) {
+        if (["Security", "Policies & SOPs", "Audit Logs"].includes(selectedArticle.category)) {
           autoApprove = true;
         }
       }
@@ -134,7 +134,7 @@ export const ArticleDetailView = ({
     let hasRoleAuth = false;
     if (user.role === "IED Head") {
       hasRoleAuth = true;
-    } else if (user.role === "DevOps & Infra Manager") {
+    } else if (user?.role === "DevOps & Infra Manager") {
       const allowedCategories = [
         "Network",
         "Cloud & Hybrid",
@@ -144,13 +144,15 @@ export const ArticleDetailView = ({
         "DevOps",
         "API Catalog",
         "Change Mgmt",
-        "Policies & SOPs"
+        "Policies & SOPs",
+        "Audit Logs"
       ];
       hasRoleAuth = allowedCategories.includes(selectedArticle.category);
-    } else if (user.role === "Sec & Comp. Manager") {
+    } else if (user?.role === "Sec & Comp. Manager") {
       const allowedCategories = [
         "Security",
-        "Policies & SOPs"
+        "Policies & SOPs",
+        "Audit Logs"
       ];
       hasRoleAuth = allowedCategories.includes(selectedArticle.category);
     }

@@ -181,7 +181,6 @@ export const EditorView = ({
 
     try {
       const newArticle = {
-        id: Math.random().toString(36).substr(2, 9),
         title: title,
         badge: status === "Draft" ? "Draft" : "",
         excerpt: (contentRef.current?.innerText || "").substring(0, 80) + "...",
