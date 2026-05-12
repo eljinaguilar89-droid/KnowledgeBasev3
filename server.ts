@@ -27,6 +27,13 @@ async function startServer() {
 
   let inMemoryCategories = [...mockCategories];
 
+  // Debug: log categories on startup to ensure mockCategories loaded correctly
+  try {
+    console.log("[startup] loaded mockCategories:", inMemoryCategories.map(c => c.title));
+  } catch (e) {
+    console.log("[startup] failed to list mockCategories", e);
+  }
+
   let inMemoryLogs: any[] = [
     { id: "1", level: "INFO", message: "System startup complete", date: new Date().toISOString().split('T')[0], createdAt: new Date() }
   ];

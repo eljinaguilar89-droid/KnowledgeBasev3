@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
-import { mockArticles } from "./data";
+import { mockArticles, mockCategories } from "./data";
 import { Topbar, Sidebar, RightPanel } from "./components/layout";
 import { DashboardView } from "./views/DashboardView";
 import { BrowseView } from "./views/BrowseView";
@@ -37,15 +37,24 @@ export default function App() {
   const [browsePage, setBrowsePage] = useState(1);
   const [articlePage, setArticlePage] = useState(1);
   const [articles, setArticles] = useState<any[]>(mockArticles);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>(mockCategories);
   const ITEMS_PER_PAGE = 9;
 
   const fetchCategories = () => {
     fetch("/api/categories")
       .then((res) => res.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          setCategories(data);
+        if (Array.isArray(data)) {
+          // Merge server categories with local mockCategories so
+          // important items (e.g. "Audit Logs") aren't lost when
+          // the API returns an incomplete list.
+          const merged = [...data];
+          mockCategories.forEach((mc) => {
+            if (!merged.find((c: any) => c.filterCategory === mc.filterCategory)) {
+              merged.push(mc);
+            }
+          });
+          setCategories(merged);
         }
       })
       .catch(console.error);
