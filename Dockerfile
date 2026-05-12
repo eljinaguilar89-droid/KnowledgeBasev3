@@ -25,9 +25,9 @@ WORKDIR /app
 # Set the environment variable to production
 ENV NODE_ENV=production
 
-# Install only production dependencies
+# Install all dependencies (needed to run TypeScript server with tsx)
 COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci && npm cache clean --force
 
 # Copy built frontend assets from the builder stage
 COPY --from=builder /app/dist ./dist
@@ -43,5 +43,5 @@ USER node
 # Expose the application port
 EXPOSE 3000
 
-# Start the application using the native Node.js type-stripping
-CMD ["npm", "start"]
+# Start the application using tsx to run the TypeScript server file
+CMD ["npx", "tsx", "server.ts"]

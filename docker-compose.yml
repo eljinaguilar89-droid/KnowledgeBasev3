@@ -7,9 +7,11 @@ services:
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    # Load runtime environment variables from .env.local
+    env_file:
+      - .env.local
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/app_db
     depends_on:
       db:
         condition: service_healthy
