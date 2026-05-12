@@ -414,20 +414,49 @@ export const RightPanel = ({
   const draftCount = userArticles.filter((a: any) => a.status === "Draft").length;
 
   // Generate recent activity from articles
-  const recentActivity = [...articles]
-    .sort((a, b) => new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime())
+  // Generate recent activity from articles (deterministic across pages)
+  const parseRelativeTime = (s?: string) => {
+    if (!s) return 0;
+    const str = String(s).trim().toLowerCase();
+    if (str === "just now") return Date.now();
+    if (str === "yesterday") return Date.now() - 24 * 60 * 60 * 1000;
+    const m = str.match(/^(\d+)\s*([hdwmy])/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      const unit = m[2];
+      const multipliers: any = {
+        h: 60 * 60 * 1000,
+        d: 24 * 60 * 60 * 1000,
+        w: 7 * 24 * 60 * 60 * 1000,
+        m: 30 * 24 * 60 * 60 * 1000,
+        y: 365 * 24 * 60 * 60 * 1000,
+      };
+      return Date.now() - n * (multipliers[unit] || 0);
+    }
+    const parsed = Date.parse(s);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
+  const itemsWithTs = articles.map((a: any) => ({
+    ...a,
+    ts: a.createdAt ? new Date(a.createdAt).getTime() : parseRelativeTime(a.date),
+  }));
+
+  const recentActivity = itemsWithTs
+    .sort((a: any, b: any) => (b.ts || 0) - (a.ts || 0))
     .slice(0, 4)
-    .map((a, i) => {
+    .map((a: any, i: number) => {
       let actionStr = "published a new article";
       if (a.status === "Pending") actionStr = "submitted an article for review";
       if (a.status === "Draft") actionStr = "saved a draft";
-      
+
       const colors = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500"];
+      const actor = a.author === user?.name ? "You" : a.author;
       return {
         id: a.id,
-        text: `${Math.random() > 0.5 && a.author !== user?.name ? a.author : "You"} ${actionStr}: ${a.title}`,
+        text: `${actor} ${actionStr}: ${a.title}`,
         time: a.date || "Just now",
-        color: colors[i % colors.length]
+        color: colors[i % colors.length],
       };
     });
 
@@ -436,7 +465,7 @@ export const RightPanel = ({
       id: "none",
       text: "No recent activity",
       time: "",
-      color: "bg-slate-400"
+      color: "bg-slate-400",
     });
   }
 
