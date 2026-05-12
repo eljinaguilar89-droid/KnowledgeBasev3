@@ -56,7 +56,7 @@ async function startServer() {
       
       const track = req.query.track as string;
       if (track === "true") {
-        await logEvent("INFO", `Audit logs viewed by user`);
+        await logEvent("INFO", `System logs viewed by user for date ${date}`);
       }
 
       if (!process.env.DATABASE_URL) {

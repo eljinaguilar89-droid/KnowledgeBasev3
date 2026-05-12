@@ -34,7 +34,7 @@ export const SystemLogsView = ({ isDarkMode }: { isDarkMode: boolean }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `audit-logs-${selectedDate}.log`;
+    a.download = `system-logs-${selectedDate}.log`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -44,11 +44,11 @@ export const SystemLogsView = ({ isDarkMode }: { isDarkMode: boolean }) => {
   return (
     <div className={`max-w-4xl mx-auto py-8 px-6 transition-colors ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}>
       <h1 className={`text-3xl font-serif font-bold mb-6 ${isDarkMode ? "text-slate-100" : "text-slate-900"} flex items-center gap-3`}>
-        Audit Logs
+        System Logs
       </h1>
       
       <p className="text-lg mb-8 leading-relaxed">
-        Access technical audit logs for debugging and error tracing. Select a date to view the logs for that day.
+        Access technical system logs for debugging and error tracing. Select a date to view the logs for that day.
       </p>
 
       <div className={`p-6 border rounded-xl shadow-sm mb-6 ${isDarkMode ? "bg-slate-900 border-slate-800" : "bg-white border-slate-200"}`}>
@@ -67,13 +67,17 @@ export const SystemLogsView = ({ isDarkMode }: { isDarkMode: boolean }) => {
             <div className={`text-sm py-2 italic flex items-center gap-2 border rounded-lg px-4 ${isDarkMode ? "text-slate-400 border-slate-700" : "text-slate-500 border-slate-200"}`}>
                Loading...
             </div>
-          ) : (
+          ) : dbLogsStr ? (
             <button 
                onClick={handleDownload}
                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
             >
                <Download className="w-4 h-4" /> Download Logs
             </button>
+          ) : (
+            <div className={`text-sm py-2 px-4 italic border rounded-lg ${isDarkMode ? "bg-slate-800 border-slate-700 text-slate-400" : "bg-slate-50 border-slate-200 text-slate-500"}`}>
+              No logs found
+            </div>
           )}
         </div>
       </div>
