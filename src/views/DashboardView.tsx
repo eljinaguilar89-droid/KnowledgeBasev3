@@ -46,7 +46,6 @@ export const DashboardView = ({
   
   const pendingForUserArticles = allArticles.filter((a: any) => {
     if (a.status !== "Pending" || a.author === user?.name) return false;
-    if (user?.role === "IED Head") return true;
     if (user?.role === "DevOps & Infra Manager") return ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
     if (user?.role === "Sec & Comp. Manager") return ["Security", "Policies & SOPs"].includes(a.category);
     return false;
@@ -61,8 +60,7 @@ export const DashboardView = ({
     if (a.status !== "Pending" || a.author === user?.name) return false;
     
     let isForUser = false;
-    if (user?.role === "IED Head") isForUser = true;
-    else if (user?.role === "DevOps & Infra Manager") isForUser = ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
+    if (user?.role === "DevOps & Infra Manager") isForUser = ["Network", "Cloud & Hybrid", "Databases", "DR/BCP", "Dev Structure", "DevOps", "API Catalog", "Change Mgmt", "Policies & SOPs"].includes(a.category);
     else if (user?.role === "Sec & Comp. Manager") isForUser = ["Security", "Policies & SOPs"].includes(a.category);
 
     if (!isForUser) return false;
@@ -104,12 +102,7 @@ export const DashboardView = ({
   } else if (user?.role === "DevOps & Infra Manager" || user?.role === "Sec & Comp. Manager") {
     tabsToMap = ["Overview", "My Articles", "To Review & Publish"];
   } else if (user?.role === "IED Head") {
-    tabsToMap = [
-      "Overview",
-      "My Articles",
-      "To Review & Publish",
-      "Compliance",
-    ];
+    tabsToMap = ["Overview", "My Articles", "To Review & Publish"];
   }
 
   if (hasDrafts && !tabsToMap.includes("My Drafts")) {
@@ -312,7 +305,7 @@ export const DashboardView = ({
         </>
       )}
 
-      {activeTab === "Compliance" && (
+      {activeTab === "Compliance" && user?.role !== "IED Head" && (
         <div className="mb-8">
           <h3
             className={`text-xl font-serif mb-4 ${isDarkMode ? "text-slate-200" : "text-slate-800"}`}
