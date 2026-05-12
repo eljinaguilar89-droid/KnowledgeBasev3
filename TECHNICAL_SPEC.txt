@@ -1,0 +1,125 @@
+Technical Specification - KnowledgeBasev3
+
+1) Project Overview
+This repository implements a knowledge base web application (KnowledgeBasev3) with a React + TypeScript frontend and an Express + Node backend. It supports user auth, role-based access, article/category management, logging, and an API for public integrations. The app uses PostgreSQL via Drizzle ORM when a database is configured; otherwise it falls back to in-memory data for development.
+
+2) Tech Stack
+- Frontend: React 19 + TypeScript, built with Vite
+- Styling: Tailwind CSS (+ @tailwindcss/typography)
+- State / Context: React Context (AuthContext)
+- Charts / UI libs: Recharts, lucide-react, motion
+- Backend: Node.js + Express
+- Database: PostgreSQL (drizzle-orm + drizzle-kit)
+- DB driver: `pg` (node-postgres)
+- Auth / Security: `bcryptjs` for password hashing; API key support
+- Dev tooling: tsx for running TypeScript server in dev, Vite middleware for front-end HMR
+- Containerization: Dockerfile + docker-compose.yml (Postgres service + app)
+- Environment: dotenv (.env.local)
+
+3) Key Packages & Versions (from package.json)
+- react ^19, react-dom ^19
+- vite ^6.x
+- drizzle-orm ^0.45.x, drizzle-kit ^0.31.x
+- express ^4.21.x
+- pg ^8.20.x
+- bcryptjs ^3.x
+- typescript ~5.8.x
+
+4) Architecture & Components
+- Frontend (src/)
+  - `AuthContext.tsx`: manages login state in `localStorage` under the key `ied_user`.
+  - `App.tsx`: top-level view routing and data fetch logic (fetches `/api/articles` and `/api/categories` when logged in).
+  - Views and components under `src/views` and `src/components` implement the UI (Dashboard, Editor, Browse, Analytics, Users, Logs, etc.).
+  - `AiChatDrawer` and `ApiIntegrationView`: client-side integrations (project includes `@google/genai` dependency for AI usage).
+
+- Backend (server.ts)
+  - Express server exposing REST endpoints under `/api`.
+  - Dev: Vite is started in middleware mode so the same process serves the frontend during development.
+  - Production: the `dist/` directory is served as static assets; Express returns `index.html` for SPA routes.
+  - Routes include (non-exhaustive):
+    - Auth: `POST /api/auth/signup`, `POST /api/auth/signin`, `POST /api/auth/generate-key`
+    - Articles CRUD: `GET/POST/PUT/DELETE /api/articles`
+    - Categories: `GET/POST /api/categories`
+    - Users: `GET /api/users`, `PUT /api/users/:id/role`, `DELETE /api/users/:id`
+    - System logs: `GET/POST /api/logs`
+    - Public API namespace: `/api/public/v1/*` (requires API key when DB enabled)
+
+- Database (src/db)
+  - Uses Drizzle ORM (Postgres adapter). Configuration is in `drizzle.config.ts`.
+  - `src/db/schema.ts` defines tables: `users`, `categories`, `system_logs`, `articles`.
+  - `src/db/index.ts` creates a `pg.Pool` and the Drizzle client, with optional SSL handling for cloud-hosted Postgres.
+  - `drizzle/` contains SQL snapshots and migration output.
+
+5) Data Model (high level, from schema.ts)
+- `users`: id, email (unique), password (hashed), name, role, api_key, created_at
+- `categories`: id, title, filter_category, icon, count, color_class, group
+- `system_logs`: id, level, message, date (YYYY-MM-DD), created_at
+- `articles`: id, title, excerpt, content, author, date, views, category, categoryColor, badge, status, accessLevel, attachments (JSON), created_at
+
+6) Authentication & Authorization
+- Passwords are hashed with `bcryptjs` on signup (`/api/auth/signup`).
+- Sign-in (`/api/auth/signin`) validates credentials and returns user profile + `apiKey` if present.
+- API Key flow: `/api/auth/generate-key` issues keys prefixed with `ied_...` and stored in `users.api_key` when DB enabled.
+- Public integration routes under `/api/public/v1/*` check `x-api-key` header or `apiKey` query param against `users.api_key` when a database is configured.
+- Frontend role-based UI logic in `App.tsx` filters article visibility by `user.role` and `article.accessLevel`.
+
+7) Logging & Telemetry
+- The server supports storing logs in the `system_logs` table or in-memory logs when `DATABASE_URL` is not set.
+- Endpoints: `GET /api/logs?date=YYYY-MM-DD` and `POST /api/logs` to retrieve and create logs.
+
+8) How It Works — Typical Flows
+- Dev startup
+  1. Create `.env.local` with environment variables (e.g. `DATABASE_URL`).
+  2. `npm ci` (or `npm install`).
+  3. `npm run dev` — this runs `tsx server.ts`, which starts the Express server and Vite middleware for the frontend.
+
+- Production
+  - You can build the frontend (`npm run build`) and run the server (the Dockerfile uses `npx tsx server.ts` in the runtime image). Alternatively `docker-compose up --build` will build the app image and a Postgres service (docker-compose.yml maps port 3000 and 5432).
+
+- Request flow (user perspective)
+  - User signs in via frontend form → POST `/api/auth/signin` → server validates password with `bcrypt.compare` → returns user profile.
+  - Once authenticated, the frontend fetches `/api/articles` and `/api/categories` to populate the UI.
+  - Creating/updating articles calls the respective CRUD endpoints; the server writes to DB (via Drizzle) when `DATABASE_URL` is set, or modifies in-memory collections when not.
+
+9) Configuration & Environment
+- `dotenv` loads `.env.local` by default (see `server.ts`). Provide `DATABASE_URL` to enable Postgres.
+- Drizzle config reads the schema from `src/db/schema.ts` and uses `dbCredentials.url` from `process.env.DATABASE_URL`.
+- SSL for PG is detected automatically when `DATABASE_URL` contains `sslmode=require` or common cloud hosts (e.g., `.neon.`) or when `PGSSLMODE` is set.
+
+10) Dev / DB commands
+- `npm run dev` — run TypeScript server with Vite middleware (development)
+- `npm run build` — build frontend with Vite (produces `dist/`)
+- `npm run start` — start server (note: project uses `tsx` in dev and Docker uses `npx tsx server.ts` for runtime)
+- `npm run db:push` — push the Drizzle schema to the configured DB
+- `npm run db:studio` — open Drizzle Studio
+
+11) Deployment Notes
+- The repository includes a `Dockerfile` (multi-stage build) and `docker-compose.yml` that runs an app container and a Postgres 15 Alpine container. Dockerfile builds the frontend and runs the TypeScript server with `tsx` in the runtime image.
+- Ensure secrets (`DATABASE_URL`) are injected securely in production (CI/CD secrets, environment, or cloud provider secrets store).
+
+12) Known Implementation Details & Tips
+- The server falls back to in-memory collections (`mockArticles`, `mockCategories`, `inMemoryLogs`) when `DATABASE_URL` is not set — convenient for local dev without Postgres.
+- The frontend stores the logged-in user in `localStorage` (`ied_user`). Clearing it forces re-authentication.
+- Role-based visibility logic is implemented client-side in `App.tsx` (additional server-side checks are minimal); consider adding server-side authorization checks if stronger enforcement is required for production.
+
+13) Where to look in the repo
+- Code entry points:
+  - Frontend: `src/App.tsx`, `src/views/`, `src/components/`
+  - Backend: `server.ts`
+  - DB schema & client: `src/db/schema.ts`, `src/db/index.ts`
+  - Migrations / drift output: `drizzle/`
+  - Dev / container: `Dockerfile`, `docker-compose.yml`
+
+14) Quick start (local)
+1. Copy or create `.env.local` with `DATABASE_URL=<your-postgres-url>` (optional for DB). Example for local Docker Postgres: `postgresql://postgres:postgres@localhost:5432/app_db`.
+2. Install deps: `npm ci`
+3. Run dev server: `npm run dev`
+4. Open http://localhost:3000
+
+If you'd like, I can also:
+- add a short README snippet in the repo that contains these steps,
+- generate an `.env.example` file,
+- or create a `CONTRIBUTING.md` with run/build instructions.
+
+---
+Generated from repository inspection on 2026-05-12.
