@@ -535,7 +535,9 @@ export default function App() {
                       {n.message}
                     </p>
                     <p className={`text-[10px] mt-2 ${isDarkMode ? "text-slate-500" : "text-slate-400"}`}>
-                      {n.date === 'Just now' ? 'Just now' : new Date(n.timeMs).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + ' - ' + new Date(n.timeMs).toLocaleDateString()}
+                      {Date.now() - (n.timeMs || 0) < 60 * 1000
+                        ? 'Just now'
+                        : new Date(n.timeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date(n.timeMs).toLocaleDateString()}
                     </p>
                   </div>
                 ))

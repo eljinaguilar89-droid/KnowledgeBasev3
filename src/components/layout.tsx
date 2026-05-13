@@ -452,10 +452,17 @@ export const RightPanel = ({
 
       const colors = ["bg-blue-500", "bg-green-500", "bg-purple-500", "bg-orange-500"];
       const actor = a.author === user?.name ? "You" : a.author;
+      const tsVal = a.ts || 0;
+      const timeLabel = tsVal && (Date.now() - tsVal < 60 * 1000)
+        ? "Just now"
+        : tsVal
+          ? new Date(tsVal).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) + " - " + new Date(tsVal).toLocaleDateString()
+          : (a.date || "");
+
       return {
         id: a.id,
         text: `${actor} ${actionStr}: ${a.title}`,
-        time: a.date || "Just now",
+        time: timeLabel,
         color: colors[i % colors.length],
       };
     });
