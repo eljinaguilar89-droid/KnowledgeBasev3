@@ -252,7 +252,8 @@ export const DashboardView = ({
                         {(() => {
                            const cArticles = allArticles.filter((a: any) => a.category === cat.filterCategory || cat.filterCategory === "All");
                            const cPending = cArticles.filter((a: any) => a.status === "Pending");
-                           return `${cArticles.length} articles · ${cPending.length} pending`;
+                           const cPublished = cArticles.filter((a: any) => a.status === "Published");
+                           return `${cPublished.length} articles · ${cPending.length} pending`;
                         })()}
                       </p>
                     </button>
