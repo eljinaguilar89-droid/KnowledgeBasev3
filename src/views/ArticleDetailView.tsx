@@ -258,10 +258,10 @@ export const ArticleDetailView = ({
           </p>
 
           <div
-            className={`prose max-w-none transition-colors prose-li:marker:text-slate-800 dark:prose-li:marker:text-slate-200 ${isDarkMode ? "prose-invert" : "prose-slate"}`}
+            className={`prose max-w-none transition-colors prose-li:marker:text-slate-800 dark:prose-li:marker:text-slate-200 ${isDarkMode ? "prose-invert" : "prose-slate"} flex-1 min-h-0 overflow-auto`}
           >
             <div
-              className={`text-lg leading-[1.8] whitespace-pre-wrap font-sans min-h-[500px] ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
+              className={`text-lg leading-[1.8] whitespace-pre-wrap font-sans break-words max-w-full ${isDarkMode ? "text-slate-300" : "text-slate-700"}`}
               dangerouslySetInnerHTML={{
                 __html: currentArticlePageContent.includes("<") 
                         ? currentArticlePageContent 
