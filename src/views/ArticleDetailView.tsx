@@ -247,7 +247,7 @@ export const ArticleDetailView = ({
           </div>
 
           <h1
-            className={`text-4xl font-serif font-bold mb-6 leading-tight ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}
+            className={`mt-4 text-4xl font-serif font-bold mb-6 leading-tight ${isDarkMode ? "text-slate-100" : "text-slate-900"}`}
           >
             {selectedArticle.title}
           </h1>
