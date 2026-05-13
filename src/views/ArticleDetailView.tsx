@@ -251,11 +251,6 @@ export const ArticleDetailView = ({
           >
             {selectedArticle.title}
           </h1>
-          <p
-            className={`text-xl leading-relaxed mb-16 pb-8 border-b ${isDarkMode ? "text-slate-400 border-slate-800" : "text-slate-500 border-slate-100"}`}
-          >
-            {selectedArticle.excerpt}
-          </p>
 
           <div
             className={`prose max-w-none transition-colors prose-li:marker:text-slate-800 dark:prose-li:marker:text-slate-200 ${isDarkMode ? "prose-invert" : "prose-slate"} flex-1 min-h-0 overflow-auto`}
